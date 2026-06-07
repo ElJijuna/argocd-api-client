@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "name": "npm Registry API Client",
+  "readme": "none",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/ElJijuna/npmjs-api-client",
+    "npm": "https://www.npmjs.com/package/npmjs-api-client"
+  }
+}
