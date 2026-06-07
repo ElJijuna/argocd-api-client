@@ -71,6 +71,14 @@ const apps = await argocd.applications.list(
 controller.abort();
 ```
 
+## Benchmarks
+
+```bash
+npm run bench
+```
+
+The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo CD server. It covers client construction, resource access, GET/POST/DELETE request paths, query params, error handling, `AbortSignal`, and memory pressure.
+
 ## API Coverage
 
 Initial client covers common official REST resources:

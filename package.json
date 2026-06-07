@@ -25,7 +25,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "bench": "NODE_OPTIONS=--expose-gc jest --config jest.bench.config.ts --no-coverage --runInBand"
   },
   "keywords": [
     "argocd",

@@ -3,6 +3,7 @@ src/
 
 # tests
 *.test.ts
+bench/
 tests/
 coverage/
 
@@ -13,6 +14,7 @@ tsconfig.json
 tsconfig.test.json
 tsup.config.ts
 jest.config.ts
+jest.bench.config.ts
 typedoc.json
 .releaserc.json
 package-lock.json
