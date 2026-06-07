@@ -1,3 +1,13 @@
+# 1.0.0 (2026-06-07)
+
+
+### Features
+
+* add benchmarking suite for Argo CD client performance testing ([6863e96](https://github.com/ElJijuna/argocd-api-client/commit/6863e966559d1fbdce334174efc16b98974e7c68))
+* add semantic release configuration and changelog generation ([a33b29b](https://github.com/ElJijuna/argocd-api-client/commit/a33b29b3bfdbbb97604b08682bda32ea7cd0fcfd))
+* enhance Argo CD API client with detailed documentation and release workflow ([04143d7](https://github.com/ElJijuna/argocd-api-client/commit/04143d70e1e4e18d1bfe7b1dac0fe33637bf8aaa))
+* initialize Argo CD API client with TypeScript ([edb8893](https://github.com/ElJijuna/argocd-api-client/commit/edb88931cdc4b5aae634439a34dc9854957c80d9))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
