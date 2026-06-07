@@ -10,7 +10,7 @@ import type { QueryParams, QueryValue } from './resources/types';
 export interface ArgoCdClientOptions {
   /** Base URL of the Argo CD server, without `/api/v1`. */
   baseUrl: string;
-  /** JWT used as `Authorization: Bearer <token>` for authenticated endpoints. */
+  /** Argo CD JWT sent as `Authorization: Bearer <jwt>` for authenticated endpoints. */
   token?: string;
 }
 

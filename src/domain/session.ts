@@ -8,6 +8,6 @@ export interface ArgoCdSessionRequest {
 
 /** Session response returned by Argo CD. */
 export interface ArgoCdSession {
-  /** JWT token used for bearer authentication. */
+  /** JWT returned by Argo CD for API authentication. */
   token: string;
 }

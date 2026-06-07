@@ -4,9 +4,20 @@
   <img src="https://argo-cd.readthedocs.io/en/stable/assets/logo.png" alt="Argo CD logo" width="160" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/ElJijuna/argocd-api-client/actions/workflows/release.yml"><img src="https://github.com/ElJijuna/argocd-api-client/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+  <a href="https://www.npmjs.com/package/argocd-api-client"><img src="https://img.shields.io/npm/v/argocd-api-client" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/argocd-api-client"><img src="https://img.shields.io/npm/dm/argocd-api-client" alt="npm downloads" /></a>
+  <a href="https://bundlephobia.com/package/argocd-api-client"><img src="https://img.shields.io/bundlephobia/minzip/argocd-api-client" alt="Bundle size" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6.x-blue?logo=typescript&amp;logoColor=white" alt="TypeScript" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/node/v/argocd-api-client" alt="Node.js" /></a>
+  <a href="https://semantic-release.gitbook.io/semantic-release/"><img src="https://img.shields.io/badge/semantic--release-enabled-e10079?logo=semantic-release" alt="semantic-release" /></a>
+</p>
+
 TypeScript client for the official Argo CD REST API. Works in Node.js 18+ and browsers via `fetch`.
 
-Argo CD exposes Swagger docs at `/swagger-ui` on each Argo CD server, and authenticated REST calls use `Authorization: Bearer <token>`.
+Argo CD exposes Swagger docs at `/swagger-ui` on each Argo CD server. Argo CD authenticates API requests with JWTs; pass the JWT in the `Authorization` header as `Bearer <jwt>`.
 
 ## Install
 
