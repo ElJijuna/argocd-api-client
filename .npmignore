@@ -16,6 +16,7 @@ jest.config.ts
 typedoc.json
 .releaserc.json
 package-lock.json
+CHANGELOG.md
 
 # CI/CD
 .github/
