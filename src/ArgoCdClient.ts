@@ -8,15 +8,35 @@ import { RepositoryResource } from './resources/RepositoryResource';
 import type { QueryParams, QueryValue } from './resources/types';
 
 export interface ArgoCdClientOptions {
+  /** Base URL of the Argo CD server, without `/api/v1`. */
   baseUrl: string;
+  /** JWT used as `Authorization: Bearer <token>` for authenticated endpoints. */
   token?: string;
 }
 
+/**
+ * Main entry point for the Argo CD REST API client.
+ *
+ * @example
+ * ```typescript
+ * const argocd = new ArgoCdClient({
+ *   baseUrl: 'https://argocd.example.com',
+ *   token: process.env.ARGOCD_TOKEN,
+ * });
+ *
+ * const apps = await argocd.applications.list({ project: ['default'] });
+ * ```
+ */
 export class ArgoCdClient {
+  /** Application API resource. */
   readonly applications: ApplicationResource;
+  /** Project API resource. */
   readonly projects: ProjectResource;
+  /** Repository API resource. */
   readonly repositories: RepositoryResource;
+  /** Cluster API resource. */
   readonly clusters: ClusterResource;
+  /** Account API resource. */
   readonly accounts: AccountResource;
   private readonly baseUrl: string;
   private readonly token?: string;
@@ -44,6 +64,11 @@ export class ArgoCdClient {
     this.accounts = new AccountResource(request, put, del);
   }
 
+  /**
+   * Creates an Argo CD session from username/password credentials.
+   *
+   * `POST /api/v1/session`
+   */
   async createSession(body: ArgoCdSessionRequest, signal?: AbortSignal): Promise<ArgoCdSession> {
     return this.post<ArgoCdSession>('/api/v1/session', body, signal);
   }

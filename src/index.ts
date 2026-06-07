@@ -23,3 +23,4 @@ export type {
 export type { ArgoCdCluster, ArgoCdClusterList } from './domain/cluster';
 export type { ArgoCdProject, ArgoCdProjectList, ArgoCdProjectListParams } from './domain/project';
 export type { ArgoCdRepository, ArgoCdRepositoryList } from './domain/repository';
+export type { QueryParams, QueryValue } from './resources/types';
