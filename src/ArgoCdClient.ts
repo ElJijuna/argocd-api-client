@@ -7,6 +7,20 @@ import { ProjectResource } from './resources/ProjectResource';
 import { RepositoryResource } from './resources/RepositoryResource';
 import type { QueryParams, QueryValue } from './resources/types';
 
+export interface RequestEvent {
+  url: string;
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  startedAt: Date;
+  finishedAt: Date;
+  durationMs: number;
+  statusCode?: number;
+  error?: Error;
+}
+
+export interface ArgoCdClientEvents {
+  request: (event: RequestEvent) => void;
+}
+
 export interface ArgoCdClientOptions {
   /** Base URL of the Argo CD server, without `/api/v1`. */
   baseUrl: string;
@@ -59,6 +73,10 @@ export class ArgoCdClient {
   private credentials?: StoredCredentials;
   private readonly publicHeaders = { Accept: 'application/json' };
   private readonly postHeaders = { Accept: 'application/json', 'Content-Type': 'application/json' };
+  private readonly listeners: Map<
+    keyof ArgoCdClientEvents,
+    ArgoCdClientEvents[keyof ArgoCdClientEvents][]
+  > = new Map();
 
   constructor(options: ArgoCdClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
@@ -79,6 +97,23 @@ export class ArgoCdClient {
     this.repositories = new RepositoryResource(request, post, del);
     this.clusters = new ClusterResource(request, post, del);
     this.accounts = new AccountResource(request, put, del);
+  }
+
+  on<K extends keyof ArgoCdClientEvents>(event: K, callback: ArgoCdClientEvents[K]): this {
+    const callbacks = this.listeners.get(event) ?? [];
+    callbacks.push(callback);
+    this.listeners.set(event, callbacks);
+    return this;
+  }
+
+  private emit<K extends keyof ArgoCdClientEvents>(
+    event: K,
+    payload: Parameters<ArgoCdClientEvents[K]>[0],
+  ): void {
+    const callbacks = this.listeners.get(event) ?? [];
+    for (const cb of callbacks) {
+      (cb as (p: typeof payload) => void)(payload);
+    }
   }
 
   /**
@@ -125,12 +160,39 @@ export class ArgoCdClient {
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
-    let response = await fetch(url, { headers: this.authHeaders(), signal });
-    if (response.status === 401 && this.credentials) {
-      await this.refreshSession(signal);
-      response = await fetch(url, { headers: this.authHeaders(), signal });
+    const startedAt = new Date();
+    let statusCode: number | undefined;
+    try {
+      let response = await fetch(url, { headers: this.authHeaders(), signal });
+      if (response.status === 401 && this.credentials) {
+        await this.refreshSession(signal);
+        response = await fetch(url, { headers: this.authHeaders(), signal });
+      }
+      statusCode = response.status;
+      const result = await parseResponse<T>(response);
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method: 'GET',
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+      });
+      return result;
+    } catch (error) {
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method: 'GET',
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+        error: error as Error,
+      });
+      throw error;
     }
-    return parseResponse<T>(response);
   }
 
   private async post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -145,32 +207,86 @@ export class ArgoCdClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const serialized = JSON.stringify(body);
-    let response = await fetch(url, {
-      method,
-      headers: this.authHeaders(true),
-      body: serialized,
-      signal,
-    });
-    if (response.status === 401 && this.credentials) {
-      await this.refreshSession(signal);
-      response = await fetch(url, {
+    const startedAt = new Date();
+    let statusCode: number | undefined;
+    try {
+      let response = await fetch(url, {
         method,
         headers: this.authHeaders(true),
         body: serialized,
         signal,
       });
+      if (response.status === 401 && this.credentials) {
+        await this.refreshSession(signal);
+        response = await fetch(url, {
+          method,
+          headers: this.authHeaders(true),
+          body: serialized,
+          signal,
+        });
+      }
+      statusCode = response.status;
+      const result = await parseResponse<T>(response);
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method,
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+      });
+      return result;
+    } catch (error) {
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method,
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+        error: error as Error,
+      });
+      throw error;
     }
-    return parseResponse<T>(response);
   }
 
   private async emptyRequest<T>(method: 'DELETE', path: string, signal?: AbortSignal): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    let response = await fetch(url, { method, headers: this.authHeaders(), signal });
-    if (response.status === 401 && this.credentials) {
-      await this.refreshSession(signal);
-      response = await fetch(url, { method, headers: this.authHeaders(), signal });
+    const startedAt = new Date();
+    let statusCode: number | undefined;
+    try {
+      let response = await fetch(url, { method, headers: this.authHeaders(), signal });
+      if (response.status === 401 && this.credentials) {
+        await this.refreshSession(signal);
+        response = await fetch(url, { method, headers: this.authHeaders(), signal });
+      }
+      statusCode = response.status;
+      const result = await parseResponse<T>(response);
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method,
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+      });
+      return result;
+    } catch (error) {
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method,
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+        error: error as Error,
+      });
+      throw error;
     }
-    return parseResponse<T>(response);
   }
 }
 

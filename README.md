@@ -79,6 +79,39 @@ const apps = await argocd.applications.list(
 controller.abort();
 ```
 
+## Events
+
+Use `.on('request', callback)` to observe every HTTP request made by the client — useful for logging, metrics, and error tracking.
+
+```typescript
+argocd.on('request', (event) => {
+  console.log(`[${event.method}] ${event.url} → ${event.statusCode} (${event.durationMs}ms)`);
+  if (event.error) console.error('Request failed:', event.error.message);
+});
+```
+
+The `RequestEvent` object includes:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `url` | `string` | Full URL requested |
+| `method` | `'GET' \| 'POST' \| 'PUT' \| 'PATCH' \| 'DELETE'` | HTTP method |
+| `startedAt` | `Date` | When the request started |
+| `finishedAt` | `Date` | When the request finished |
+| `durationMs` | `number` | Duration in milliseconds |
+| `statusCode` | `number \| undefined` | HTTP status code (absent on network errors) |
+| `error` | `Error \| undefined` | Set on any failed request |
+
+Multiple listeners are supported and called in registration order. `.on()` returns `this` for chaining:
+
+```typescript
+argocd
+  .on('request', (e) => metrics.record(e.durationMs))
+  .on('request', (e) => { if (e.error) sentry.capture(e.error); });
+```
+
+> Token auto-refresh on 401 is transparent: only one event is emitted per logical operation, reflecting the final outcome.
+
 ## Express Integration
 
 Install Express and (optionally) its types:

@@ -102,6 +102,55 @@ describe('ArgoCdClient', () => {
     await expect(client.applications.list()).rejects.toThrow(ArgoCdApiError);
   });
 
+  it('emits a request event on successful GET', async () => {
+    mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+    const events: import('./ArgoCdClient').RequestEvent[] = [];
+    client.on('request', (e) => events.push(e));
+
+    await client.applications.list();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].method).toBe('GET');
+    expect(events[0].url).toContain('/api/v1/applications');
+    expect(events[0].statusCode).toBe(200);
+    expect(events[0].error).toBeUndefined();
+    expect(events[0].durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('emits a request event with error on failed request', async () => {
+    mockJson({ error: 'forbidden' }, 403);
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+    const events: import('./ArgoCdClient').RequestEvent[] = [];
+    client.on('request', (e) => events.push(e));
+
+    await expect(client.applications.list()).rejects.toThrow(ArgoCdApiError);
+
+    expect(events).toHaveLength(1);
+    expect(events[0].statusCode).toBe(403);
+    expect(events[0].error).toBeInstanceOf(ArgoCdApiError);
+  });
+
+  it('emits a request event for POST requests', async () => {
+    mockJson({ token: 'jwt' });
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
+    const events: import('./ArgoCdClient').RequestEvent[] = [];
+    client.on('request', (e) => events.push(e));
+
+    await client.createSession({ username: 'admin', password: 'secret' });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].method).toBe('POST');
+    expect(events[0].url).toContain('/api/v1/session');
+    expect(events[0].statusCode).toBe(200);
+  });
+
+  it('supports method chaining on .on()', () => {
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
+    const result = client.on('request', () => {});
+    expect(result).toBe(client);
+  });
+
   it('fromCredentials creates an authenticated client', async () => {
     mockJson({ token: 'jwt-from-login' });
     mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
