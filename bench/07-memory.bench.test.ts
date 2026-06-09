@@ -12,17 +12,31 @@ function forceGc(): void {
 
 function formatBytes(n: number): string {
   const abs = Math.abs(n);
-  if (abs >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(2)} MB`;
-  if (abs >= 1024) return `${(n / 1024).toFixed(1)} KB`;
+
+  if (abs >= 1024 * 1024) {
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  if (abs >= 1024) {
+    return `${(n / 1024).toFixed(1)} KB`;
+  }
+
   return `${n.toFixed(0)} B`;
 }
 
 function measureHeap(label: string, fn: () => void, iterations = 10_000): void {
-  for (let i = 0; i < Math.floor(iterations / 10); i++) fn();
+  for (let i = 0; i < Math.floor(iterations / 10); i++) {
+    fn();
+  }
+
   forceGc();
 
   const before = process.memoryUsage().heapUsed;
-  for (let i = 0; i < iterations; i++) fn();
+
+  for (let i = 0; i < iterations; i++) {
+    fn();
+  }
+
   forceGc();
   const after = process.memoryUsage().heapUsed;
 
@@ -41,11 +55,18 @@ async function measureHeapAsync(
   fn: () => Promise<unknown>,
   iterations = 1_000,
 ): Promise<void> {
-  for (let i = 0; i < Math.floor(iterations / 10); i++) await fn();
+  for (let i = 0; i < Math.floor(iterations / 10); i++) {
+    await fn();
+  }
+
   forceGc();
 
   const before = process.memoryUsage().heapUsed;
-  for (let i = 0; i < iterations; i++) await fn();
+
+  for (let i = 0; i < iterations; i++) {
+    await fn();
+  }
+
   forceGc();
   const after = process.memoryUsage().heapUsed;
 
@@ -86,6 +107,7 @@ describe('07 - Memory and GC pressure', () => {
 
   it('clients are collectible after scope ends', () => {
     const instances = 500;
+
     forceGc();
     const before = process.memoryUsage().heapUsed;
 

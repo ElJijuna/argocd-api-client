@@ -101,8 +101,10 @@ export class ArgoCdClient {
 
   on<K extends keyof ArgoCdClientEvents>(event: K, callback: ArgoCdClientEvents[K]): this {
     const callbacks = this.listeners.get(event) ?? [];
+
     callbacks.push(callback);
     this.listeners.set(event, callbacks);
+
     return this;
   }
 
@@ -111,6 +113,7 @@ export class ArgoCdClient {
     payload: Parameters<ArgoCdClientEvents[K]>[0],
   ): void {
     const callbacks = this.listeners.get(event) ?? [];
+
     for (const cb of callbacks) {
       (cb as (p: typeof payload) => void)(payload);
     }
@@ -125,7 +128,9 @@ export class ArgoCdClient {
     const base = new ArgoCdClient({ baseUrl });
     const { token } = await base.createSession({ username, password }, signal);
     const client = new ArgoCdClient({ baseUrl, token });
+
     client.credentials = { username, password };
+
     return client;
   }
 
@@ -139,8 +144,10 @@ export class ArgoCdClient {
         'No credentials stored — use ArgoCdClient.fromCredentials() to enable session refresh.',
       );
     }
+
     const base = new ArgoCdClient({ baseUrl: this.baseUrl });
     const { token } = await base.createSession(this.credentials, signal);
+
     this.token = token;
   }
 
@@ -155,22 +162,27 @@ export class ArgoCdClient {
 
   private authHeaders(includeContentType?: boolean) {
     const base = includeContentType ? this.postHeaders : this.publicHeaders;
+
     return this.token ? { ...base, Authorization: `Bearer ${this.token}` } : { ...base };
   }
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
     const startedAt = new Date();
+
     let statusCode: number | undefined;
+
     try {
       let response = await fetch(url, { headers: this.authHeaders(), signal });
       if (response.status === 401 && this.credentials) {
         await this.refreshSession(signal);
         response = await fetch(url, { headers: this.authHeaders(), signal });
       }
+
       statusCode = response.status;
       const result = await parseResponse<T>(response);
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method: 'GET',
@@ -179,9 +191,11 @@ export class ArgoCdClient {
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         statusCode,
       });
+
       return result;
     } catch (error) {
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method: 'GET',
@@ -208,7 +222,9 @@ export class ArgoCdClient {
     const url = `${this.baseUrl}${path}`;
     const serialized = JSON.stringify(body);
     const startedAt = new Date();
+
     let statusCode: number | undefined;
+
     try {
       let response = await fetch(url, {
         method,
@@ -225,9 +241,11 @@ export class ArgoCdClient {
           signal,
         });
       }
+
       statusCode = response.status;
       const result = await parseResponse<T>(response);
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -236,9 +254,11 @@ export class ArgoCdClient {
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         statusCode,
       });
+
       return result;
     } catch (error) {
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -255,16 +275,20 @@ export class ArgoCdClient {
   private async emptyRequest<T>(method: 'DELETE', path: string, signal?: AbortSignal): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const startedAt = new Date();
+
     let statusCode: number | undefined;
+
     try {
       let response = await fetch(url, { method, headers: this.authHeaders(), signal });
       if (response.status === 401 && this.credentials) {
         await this.refreshSession(signal);
         response = await fetch(url, { method, headers: this.authHeaders(), signal });
       }
+
       statusCode = response.status;
       const result = await parseResponse<T>(response);
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -273,9 +297,11 @@ export class ArgoCdClient {
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         statusCode,
       });
+
       return result;
     } catch (error) {
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -291,19 +317,29 @@ export class ArgoCdClient {
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) throw new ArgoCdApiError(response.status, response.statusText);
+  if (!response.ok) {
+    throw new ArgoCdApiError(response.status, response.statusText);
+  }
+
   return (await response.json()) as T;
 }
 
 function buildUrl(url: string, params?: Record<string, QueryValue | undefined>): string {
   const parsed = new URL(url);
+
   for (const [key, value] of Object.entries(params ?? {})) {
-    if (value === undefined) continue;
+    if (value === undefined) {
+      continue;
+    }
+
     if (Array.isArray(value)) {
-      for (const item of value) parsed.searchParams.append(key, String(item));
+      for (const item of value) {
+        parsed.searchParams.append(key, String(item));
+      }
     } else {
       parsed.searchParams.set(key, String(value));
     }
   }
+
   return parsed.toString();
 }

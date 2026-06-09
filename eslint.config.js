@@ -7,13 +7,4 @@ export default [
   },
   ...eslintTs,
   ...eslintJest,
-  {
-    rules: {
-      '@stylistic/brace-style': 'off',
-      '@stylistic/padding-line-between-statements': 'off',
-      curly: 'off',
-      eqeqeq: 'off',
-      quotes: 'off',
-    },
-  },
 ];

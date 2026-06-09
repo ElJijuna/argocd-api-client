@@ -1,6 +1,7 @@
 import { ArgoCdApiError, ArgoCdClient } from './index';
 
 const mockFetch = jest.fn();
+
 global.fetch = mockFetch;
 
 function mockJson<T>(data: T, status = 200): void {
@@ -46,6 +47,7 @@ describe('ArgoCdClient', () => {
 
     expect(apps.items[0].metadata?.name).toBe('guestbook');
     const url = new URL(mockFetch.mock.calls[0][0] as string);
+
     expect(`${url.origin}${url.pathname}`).toBe('https://argocd.example.com/api/v1/applications');
     expect(url.searchParams.getAll('project')).toEqual(['default']);
     expect(url.searchParams.get('selector')).toBe('team=platform');
@@ -106,6 +108,7 @@ describe('ArgoCdClient', () => {
     mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
     const events: import('./ArgoCdClient').RequestEvent[] = [];
+
     client.on('request', (e) => events.push(e));
 
     await client.applications.list();
@@ -122,6 +125,7 @@ describe('ArgoCdClient', () => {
     mockJson({ error: 'forbidden' }, 403);
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
     const events: import('./ArgoCdClient').RequestEvent[] = [];
+
     client.on('request', (e) => events.push(e));
 
     await expect(client.applications.list()).rejects.toThrow(ArgoCdApiError);
@@ -135,6 +139,7 @@ describe('ArgoCdClient', () => {
     mockJson({ token: 'jwt' });
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
     const events: import('./ArgoCdClient').RequestEvent[] = [];
+
     client.on('request', (e) => events.push(e));
 
     await client.createSession({ username: 'admin', password: 'secret' });
@@ -148,6 +153,7 @@ describe('ArgoCdClient', () => {
   it('supports method chaining on .on()', () => {
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
     const result = client.on('request', () => {});
+
     expect(result).toBe(client);
   });
 
@@ -160,6 +166,7 @@ describe('ArgoCdClient', () => {
       username: 'admin',
       password: 'secret',
     });
+
     await client.applications.list();
 
     expect(mockFetch).toHaveBeenNthCalledWith(
@@ -182,6 +189,7 @@ describe('ArgoCdClient', () => {
       username: 'admin',
       password: 'secret',
     });
+
     await client.refreshSession();
     await client.applications.list();
 

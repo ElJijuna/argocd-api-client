@@ -15,7 +15,10 @@ describe('02 - Resource access', () => {
         client.clusters,
         client.accounts,
       ];
-      if (resources.length !== 5) throw new Error('unexpected resource count');
+
+      if (resources.length !== 5) {
+        throw new Error('unexpected resource count');
+      }
     });
   });
 });
