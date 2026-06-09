@@ -233,4 +233,242 @@ describe('ArgoCdClient', () => {
     expect(mockFetch.mock.calls[1][1]).toMatchObject({ signal: controller.signal });
     expect(mockFetch.mock.calls[2][1]).toMatchObject({ signal: controller.signal });
   });
+
+  it('skips undefined query params in the URL', async () => {
+    mockJson({ items: [] });
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+    await client.applications.list({ selector: undefined });
+
+    const url = new URL(mockFetch.mock.calls[0][0] as string);
+    expect(url.searchParams.has('selector')).toBe(false);
+  });
+
+  it('throws from refreshSession when no credentials are stored', async () => {
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+    await expect(client.refreshSession()).rejects.toThrow('No credentials stored');
+  });
+
+  describe('resource CRUD methods', () => {
+    let client: ArgoCdClient;
+
+    beforeEach(() => {
+      client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+    });
+
+    it('creates an application', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+
+      await client.applications.create({ metadata: { name: 'guestbook' } });
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/applications');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('patches an application', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+
+      await client.applications.patch('guestbook', { spec: {} });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PATCH' });
+    });
+
+    it('refreshes an application', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+
+      await client.applications.refresh('guestbook');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('refresh=normal');
+    });
+
+    it('gets a project', async () => {
+      mockJson({ metadata: { name: 'default' } });
+
+      await client.projects.get('default');
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/projects/default');
+    });
+
+    it('creates a project', async () => {
+      mockJson({ metadata: { name: 'default' } });
+
+      await client.projects.create({ metadata: { name: 'default' } });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('updates a project', async () => {
+      mockJson({ metadata: { name: 'default' } });
+
+      await client.projects.update('default', { metadata: { name: 'default' } });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/projects/default');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
+    });
+
+    it('deletes a project by name', async () => {
+      mockJson({});
+
+      await client.projects.deleteByName('default');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/projects/default');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('gets a repository', async () => {
+      mockJson({ repo: 'https://github.com/acme/app.git' });
+
+      await client.repositories.get('https://github.com/acme/app.git');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repositories/');
+    });
+
+    it('creates a repository', async () => {
+      mockJson({ repo: 'https://github.com/acme/app.git' });
+
+      await client.repositories.create({ repo: 'https://github.com/acme/app.git' });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('deletes a repository', async () => {
+      mockJson({});
+
+      await client.repositories.deleteByRepo('https://github.com/acme/app.git');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('gets a cluster', async () => {
+      mockJson({ name: 'in-cluster', server: 'https://kubernetes.default.svc' });
+
+      await client.clusters.get('https://kubernetes.default.svc');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/clusters/');
+    });
+
+    it('creates a cluster', async () => {
+      mockJson({ name: 'in-cluster', server: 'https://kubernetes.default.svc' });
+
+      await client.clusters.create({
+        name: 'in-cluster',
+        server: 'https://kubernetes.default.svc',
+      });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('deletes a cluster by server', async () => {
+      mockJson({});
+
+      await client.clusters.deleteByServer('https://kubernetes.default.svc');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('gets an account', async () => {
+      mockJson({ name: 'admin', enabled: true });
+
+      await client.accounts.get('admin');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/account/admin');
+    });
+
+    it('checks account can-i', async () => {
+      mockJson({ value: 'yes' });
+
+      await client.accounts.canI('applications', 'get', '*');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/account/can-i/');
+    });
+
+    it('updates account password', async () => {
+      mockJson({});
+
+      await client.accounts.updatePassword({
+        currentPassword: 'old',
+        name: 'admin',
+        newPassword: 'new',
+      });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/account/password');
+    });
+
+    it('deletes an account token', async () => {
+      mockJson({});
+
+      await client.accounts.deleteToken('admin', 'token-id');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/account/admin/token/token-id');
+    });
+  });
+
+  describe('401 auto-refresh on POST and DELETE', () => {
+    it('auto-refreshes on 401 from a POST request and retries', async () => {
+      mockJson({ token: 'initial-token' }); // fromCredentials
+      mockJson({ metadata: { name: 'g' } }, 401); // POST 401
+      mockJson({ token: 'new-token' }); // refresh
+      mockJson({ metadata: { name: 'g' } }); // retry success
+
+      const client = await ArgoCdClient.fromCredentials({
+        baseUrl: 'https://argocd.example.com',
+        username: 'admin',
+        password: 'secret',
+      });
+      const result = await client.applications.create({ metadata: { name: 'g' } });
+
+      expect(result.metadata?.name).toBe('g');
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
+
+    it('auto-refreshes on 401 from a DELETE request and retries', async () => {
+      mockJson({ token: 'initial-token' }); // fromCredentials
+      mockJson({}, 401); // DELETE 401
+      mockJson({ token: 'new-token' }); // refresh
+      mockJson({}); // retry success
+
+      const client = await ArgoCdClient.fromCredentials({
+        baseUrl: 'https://argocd.example.com',
+        username: 'admin',
+        password: 'secret',
+      });
+      await client.applications.deleteByName('guestbook');
+
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+      const lastCall = mockFetch.mock.calls[3][1];
+      expect(lastCall).toMatchObject({ headers: { Authorization: 'Bearer new-token' } });
+    });
+
+    it('emits a request event with error on failed POST', async () => {
+      mockJson({ error: 'bad' }, 400);
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const events: import('./ArgoCdClient').RequestEvent[] = [];
+      client.on('request', (e) => events.push(e));
+
+      await expect(client.applications.create({ metadata: { name: 'g' } })).rejects.toThrow(
+        ArgoCdApiError,
+      );
+
+      expect(events[0].method).toBe('POST');
+      expect(events[0].error).toBeInstanceOf(ArgoCdApiError);
+      expect(events[0].statusCode).toBe(400);
+    });
+
+    it('emits a request event with error on failed DELETE', async () => {
+      mockJson({ error: 'not found' }, 404);
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const events: import('./ArgoCdClient').RequestEvent[] = [];
+      client.on('request', (e) => events.push(e));
+
+      await expect(client.applications.deleteByName('nonexistent')).rejects.toThrow(ArgoCdApiError);
+
+      expect(events[0].method).toBe('DELETE');
+      expect(events[0].error).toBeInstanceOf(ArgoCdApiError);
+    });
+  });
 });
