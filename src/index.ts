@@ -5,7 +5,7 @@ export { ApplicationResource } from './resources/ApplicationResource';
 export { ClusterResource } from './resources/ClusterResource';
 export { ProjectResource } from './resources/ProjectResource';
 export { RepositoryResource } from './resources/RepositoryResource';
-export type { ArgoCdClientOptions } from './ArgoCdClient';
+export type { ArgoCdClientOptions, ArgoCdCredentialsOptions } from './ArgoCdClient';
 export type { ArgoCdSession, ArgoCdSessionRequest } from './domain/session';
 export type {
   ArgoCdApplication,

@@ -14,6 +14,22 @@ export interface ArgoCdClientOptions {
   token?: string;
 }
 
+export interface ArgoCdCredentialsOptions {
+  /** Base URL of the Argo CD server, without `/api/v1`. */
+  baseUrl: string;
+  /** Argo CD username. */
+  username: string;
+  /** Argo CD password. */
+  password: string;
+  /** Optional AbortSignal for the initial login request. */
+  signal?: AbortSignal;
+}
+
+interface StoredCredentials {
+  username: string;
+  password: string;
+}
+
 /**
  * Main entry point for the Argo CD REST API client.
  *
@@ -39,7 +55,8 @@ export class ArgoCdClient {
   /** Account API resource. */
   readonly accounts: AccountResource;
   private readonly baseUrl: string;
-  private readonly token?: string;
+  private token?: string;
+  private credentials?: StoredCredentials;
   private readonly publicHeaders = { Accept: 'application/json' };
   private readonly postHeaders = { Accept: 'application/json', 'Content-Type': 'application/json' };
 
@@ -65,6 +82,34 @@ export class ArgoCdClient {
   }
 
   /**
+   * Creates an authenticated client by exchanging credentials for a session token.
+   * Stores the credentials internally so the client can auto-refresh on 401 responses.
+   */
+  static async fromCredentials(options: ArgoCdCredentialsOptions): Promise<ArgoCdClient> {
+    const { baseUrl, username, password, signal } = options;
+    const base = new ArgoCdClient({ baseUrl });
+    const { token } = await base.createSession({ username, password }, signal);
+    const client = new ArgoCdClient({ baseUrl, token });
+    client.credentials = { username, password };
+    return client;
+  }
+
+  /**
+   * Fetches a new session token using the stored credentials and updates the client.
+   * Throws if the client was not created with `fromCredentials`.
+   */
+  async refreshSession(signal?: AbortSignal): Promise<void> {
+    if (!this.credentials) {
+      throw new Error(
+        'No credentials stored — use ArgoCdClient.fromCredentials() to enable session refresh.',
+      );
+    }
+    const base = new ArgoCdClient({ baseUrl: this.baseUrl });
+    const { token } = await base.createSession(this.credentials, signal);
+    this.token = token;
+  }
+
+  /**
    * Creates an Argo CD session from username/password credentials.
    *
    * `POST /api/v1/session`
@@ -73,13 +118,18 @@ export class ArgoCdClient {
     return this.post<ArgoCdSession>('/api/v1/session', body, signal);
   }
 
+  private authHeaders(includeContentType?: boolean) {
+    const base = includeContentType ? this.postHeaders : this.publicHeaders;
+    return this.token ? { ...base, Authorization: `Bearer ${this.token}` } : { ...base };
+  }
+
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
-    const response = await fetch(buildUrl(`${this.baseUrl}${path}`, params), {
-      headers: this.token
-        ? { ...this.publicHeaders, Authorization: `Bearer ${this.token}` }
-        : this.publicHeaders,
-      signal,
-    });
+    const url = buildUrl(`${this.baseUrl}${path}`, params);
+    let response = await fetch(url, { headers: this.authHeaders(), signal });
+    if (response.status === 401 && this.credentials) {
+      await this.refreshSession(signal);
+      response = await fetch(url, { headers: this.authHeaders(), signal });
+    }
     return parseResponse<T>(response);
   }
 
@@ -93,25 +143,33 @@ export class ArgoCdClient {
     body: unknown,
     signal?: AbortSignal,
   ): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
+    const url = `${this.baseUrl}${path}`;
+    const serialized = JSON.stringify(body);
+    let response = await fetch(url, {
       method,
-      headers: this.token
-        ? { ...this.postHeaders, Authorization: `Bearer ${this.token}` }
-        : this.postHeaders,
-      body: JSON.stringify(body),
+      headers: this.authHeaders(true),
+      body: serialized,
       signal,
     });
+    if (response.status === 401 && this.credentials) {
+      await this.refreshSession(signal);
+      response = await fetch(url, {
+        method,
+        headers: this.authHeaders(true),
+        body: serialized,
+        signal,
+      });
+    }
     return parseResponse<T>(response);
   }
 
   private async emptyRequest<T>(method: 'DELETE', path: string, signal?: AbortSignal): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: this.token
-        ? { ...this.publicHeaders, Authorization: `Bearer ${this.token}` }
-        : this.publicHeaders,
-      signal,
-    });
+    const url = `${this.baseUrl}${path}`;
+    let response = await fetch(url, { method, headers: this.authHeaders(), signal });
+    if (response.status === 401 && this.credentials) {
+      await this.refreshSession(signal);
+      response = await fetch(url, { method, headers: this.authHeaders(), signal });
+    }
     return parseResponse<T>(response);
   }
 }

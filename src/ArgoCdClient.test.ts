@@ -102,6 +102,65 @@ describe('ArgoCdClient', () => {
     await expect(client.applications.list()).rejects.toThrow(ArgoCdApiError);
   });
 
+  it('fromCredentials creates an authenticated client', async () => {
+    mockJson({ token: 'jwt-from-login' });
+    mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
+
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+    await client.applications.list();
+
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      'https://argocd.example.com/api/v1/session',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(mockFetch.mock.calls[1][1]).toMatchObject({
+      headers: { Authorization: 'Bearer jwt-from-login' },
+    });
+  });
+
+  it('refreshSession updates the token used in subsequent requests', async () => {
+    mockJson({ token: 'initial-token' });
+    mockJson({ token: 'refreshed-token' });
+    mockJson({ items: [] });
+
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+    await client.refreshSession();
+    await client.applications.list();
+
+    expect(mockFetch.mock.calls[2][1]).toMatchObject({
+      headers: { Authorization: 'Bearer refreshed-token' },
+    });
+  });
+
+  it('auto-refreshes on 401 and retries the request', async () => {
+    mockJson({ token: 'initial-token' });
+    mockJson({ items: [] }, 401);
+    mockJson({ token: 'new-token' });
+    mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
+
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+    const apps = await client.applications.list();
+
+    expect(apps.items[0].metadata?.name).toBe('guestbook');
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(mockFetch.mock.calls[3][1]).toMatchObject({
+      headers: { Authorization: 'Bearer new-token' },
+    });
+  });
+
   it('passes AbortSignal to GET POST and DELETE requests', async () => {
     mockJson({ items: [] });
     mockJson({ token: 'jwt-token' });

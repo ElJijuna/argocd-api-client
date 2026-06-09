@@ -42,17 +42,14 @@ console.log(apps.items.map((app) => app.metadata?.name));
 ## Login
 
 ```typescript
-const argocd = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
-const session = await argocd.createSession({
+const argocd = await ArgoCdClient.fromCredentials({
+  baseUrl: 'https://argocd.example.com',
   username: 'admin',
   password: 'password',
 });
-
-const authenticated = new ArgoCdClient({
-  baseUrl: 'https://argocd.example.com',
-  token: session.token,
-});
 ```
+
+The client stores the credentials internally and automatically refreshes the session on 401 responses.
 
 ## Resources
 
@@ -167,22 +164,31 @@ ARGOCD_BASE_URL=https://argocd.example.com
 ARGOCD_TOKEN=<jwt>
 ```
 
-If you don't have a static token, authenticate once at startup and reuse the session:
+If you don't have a static token, use `fromCredentials` to authenticate and get a ready-to-use client in one call:
 
 ```typescript
 import { ArgoCdClient } from 'argocd-api-client';
 
-const base = new ArgoCdClient({ baseUrl: process.env.ARGOCD_BASE_URL! });
-const { token } = await base.createSession({
+export const argocd = await ArgoCdClient.fromCredentials({
+  baseUrl: process.env.ARGOCD_BASE_URL!,
   username: process.env.ARGOCD_USER!,
   password: process.env.ARGOCD_PASS!,
 });
-
-export const argocd = new ArgoCdClient({
-  baseUrl: process.env.ARGOCD_BASE_URL!,
-  token,
-});
 ```
+
+### Token refresh
+
+Clients created with `fromCredentials` store the credentials internally and handle token expiry automatically:
+
+```typescript
+// Automatic — a 401 response triggers a session refresh and retries the request once
+await argocd.applications.list();
+
+// Manual — force a refresh before the token expires
+await argocd.refreshSession();
+```
+
+Clients created with `new ArgoCdClient({ token })` do not store credentials; calling `refreshSession()` on them throws an error.
 
 ### Express + createSession
 
