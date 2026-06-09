@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.1.0...v1.2.0) (2026-06-09)
+
+
+### Features
+
+* enhance ArgoCdClient with ApplicationSet support and improve application management features ([eaaba57](https://github.com/ElJijuna/argocd-api-client/commit/eaaba57bff01e17ecdc3d4863f20b7a505ec1c18))
+
 # [1.1.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.0.0...v1.1.0) (2026-06-09)
 
 
