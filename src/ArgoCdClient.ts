@@ -2,6 +2,7 @@ import type { ArgoCdSession, ArgoCdSessionRequest } from './domain/session';
 import { ArgoCdApiError } from './errors/ArgoCdApiError';
 import { AccountResource } from './resources/AccountResource';
 import { ApplicationResource } from './resources/ApplicationResource';
+import { ApplicationSetResource } from './resources/ApplicationSetResource';
 import { ClusterResource } from './resources/ClusterResource';
 import { ProjectResource } from './resources/ProjectResource';
 import { RepositoryResource } from './resources/RepositoryResource';
@@ -60,6 +61,8 @@ interface StoredCredentials {
 export class ArgoCdClient {
   /** Application API resource. */
   readonly applications: ApplicationResource;
+  /** ApplicationSet API resource. */
+  readonly applicationSets: ApplicationSetResource;
   /** Project API resource. */
   readonly projects: ProjectResource;
   /** Repository API resource. */
@@ -91,11 +94,14 @@ export class ArgoCdClient {
       this.bodyRequest<T>('PATCH', path, body, signal);
     const del = <T>(path: string, signal?: AbortSignal) =>
       this.emptyRequest<T>('DELETE', path, signal);
+    const ndJson = <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
+      this.ndJsonRequest<T>(path, params, signal);
 
-    this.applications = new ApplicationResource(request, post, del, patch);
+    this.applications = new ApplicationResource(request, post, del, patch, put, ndJson);
+    this.applicationSets = new ApplicationSetResource(request, post, put, del);
     this.projects = new ProjectResource(request, post, put, del);
     this.repositories = new RepositoryResource(request, post, del);
-    this.clusters = new ClusterResource(request, post, del);
+    this.clusters = new ClusterResource(request, post, del, put);
     this.accounts = new AccountResource(request, put, del);
   }
 
@@ -164,6 +170,57 @@ export class ArgoCdClient {
     const base = includeContentType ? this.postHeaders : this.publicHeaders;
 
     return this.token ? { ...base, Authorization: `Bearer ${this.token}` } : { ...base };
+  }
+
+  private async ndJsonRequest<T>(
+    path: string,
+    params?: QueryParams,
+    signal?: AbortSignal,
+  ): Promise<T[]> {
+    const url = buildUrl(`${this.baseUrl}${path}`, params);
+    const startedAt = new Date();
+    let statusCode: number | undefined;
+    try {
+      let response = await fetch(url, { headers: this.authHeaders(), signal });
+      if (response.status === 401 && this.credentials) {
+        await this.refreshSession(signal);
+        response = await fetch(url, { headers: this.authHeaders(), signal });
+      }
+      statusCode = response.status;
+      if (!response.ok) {
+        throw new ArgoCdApiError(response.status, response.statusText);
+      }
+      const text = await response.text();
+      const result = text
+        .split('\n')
+        .filter(Boolean)
+        .flatMap((line) => {
+          const parsed = JSON.parse(line) as { result?: T; error?: unknown };
+          return parsed.error || !parsed.result ? [] : [parsed.result];
+        });
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method: 'GET',
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+      });
+      return result;
+    } catch (error) {
+      const finishedAt = new Date();
+      this.emit('request', {
+        url,
+        method: 'GET',
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+        error: error as Error,
+      });
+      throw error;
+    }
   }
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {

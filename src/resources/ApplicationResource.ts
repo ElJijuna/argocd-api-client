@@ -3,8 +3,14 @@ import type {
   ArgoCdApplicationGetParams,
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
+  ArgoCdApplicationLogsParams,
+  ArgoCdLogEntry,
+  ArgoCdManagedResource,
+  ArgoCdManagedResourcesList,
+  ArgoCdManagedResourcesParams,
+  ArgoCdResourceTree,
 } from '../domain/application';
-import type { BodyRequestFn, EmptyBodyRequestFn, RequestFn } from './types';
+import type { BodyRequestFn, EmptyBodyRequestFn, NdJsonRequestFn, RequestFn } from './types';
 
 /**
  * Methods for Argo CD applications.
@@ -18,6 +24,8 @@ export class ApplicationResource {
     private readonly post: BodyRequestFn,
     private readonly deleteRequest: EmptyBodyRequestFn,
     private readonly patchRequest: BodyRequestFn,
+    private readonly put: BodyRequestFn,
+    private readonly ndJson: NdJsonRequestFn,
   ) {}
 
   /** Lists applications, optionally filtered by project, selector, repo, or namespace. */
@@ -44,6 +52,19 @@ export class ApplicationResource {
   /** Creates an application. */
   async create(application: ArgoCdApplication, signal?: AbortSignal): Promise<ArgoCdApplication> {
     return this.post<ArgoCdApplication>('/api/v1/applications', { application }, signal);
+  }
+
+  /** Updates an application by name (full replace). */
+  async update(
+    name: string,
+    application: ArgoCdApplication,
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplication> {
+    return this.put<ArgoCdApplication>(
+      `/api/v1/applications/${encodeURIComponent(name)}`,
+      { application },
+      signal,
+    );
   }
 
   /** Deletes an application by name. */
@@ -74,6 +95,59 @@ export class ApplicationResource {
       body,
       signal,
     );
+  }
+
+  /** Rolls back an application to a previous deployment ID. */
+  async rollback(
+    name: string,
+    body: { id?: number; prune?: boolean; dryRun?: boolean } = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplication> {
+    return this.post<ArgoCdApplication>(
+      `/api/v1/applications/${encodeURIComponent(name)}/rollback`,
+      body,
+      signal,
+    );
+  }
+
+  /** Fetches buffered pod logs for an application. */
+  async logs(
+    name: string,
+    params: ArgoCdApplicationLogsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdLogEntry[]> {
+    return this.ndJson<ArgoCdLogEntry>(
+      `/api/v1/applications/${encodeURIComponent(name)}/logs`,
+      params,
+      signal,
+    );
+  }
+
+  /** Returns the live resource tree for an application. */
+  async resourceTree(
+    name: string,
+    params: { appNamespace?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdResourceTree> {
+    return this.request<ArgoCdResourceTree>(
+      `/api/v1/applications/${encodeURIComponent(name)}/resource-tree`,
+      params,
+      signal,
+    );
+  }
+
+  /** Returns the managed Kubernetes resources for an application. */
+  async managedResources(
+    name: string,
+    params: ArgoCdManagedResourcesParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdManagedResource[]> {
+    const res = await this.request<ArgoCdManagedResourcesList>(
+      `/api/v1/applications/${encodeURIComponent(name)}/managed-resources`,
+      params,
+      signal,
+    );
+    return res.items ?? [];
   }
 
   /** Refreshes an application using the normal refresh mode. */

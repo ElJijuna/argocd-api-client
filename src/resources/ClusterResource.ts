@@ -8,6 +8,7 @@ export class ClusterResource {
     private readonly request: RequestFn,
     private readonly post: BodyRequestFn,
     private readonly deleteRequest: EmptyBodyRequestFn,
+    private readonly put: BodyRequestFn,
   ) {}
 
   /** Lists configured clusters. */
@@ -27,6 +28,19 @@ export class ClusterResource {
   /** Creates a cluster entry. */
   async create(cluster: ArgoCdCluster, signal?: AbortSignal): Promise<ArgoCdCluster> {
     return this.post<ArgoCdCluster>('/api/v1/clusters', { cluster }, signal);
+  }
+
+  /** Updates a cluster by server URL (full replace). */
+  async update(
+    server: string,
+    cluster: ArgoCdCluster,
+    signal?: AbortSignal,
+  ): Promise<ArgoCdCluster> {
+    return this.put<ArgoCdCluster>(
+      `/api/v1/clusters/${encodeURIComponent(server)}`,
+      { cluster },
+      signal,
+    );
   }
 
   /** Deletes a cluster by server URL. */

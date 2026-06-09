@@ -18,3 +18,10 @@ export type BodyRequestFn = <T>(path: string, body?: unknown, signal?: AbortSign
 
 /** @internal */
 export type EmptyBodyRequestFn = <T>(path: string, signal?: AbortSignal) => Promise<T>;
+
+/** @internal */
+export type NdJsonRequestFn = <T>(
+  path: string,
+  params?: QueryParams,
+  signal?: AbortSignal,
+) => Promise<T[]>;

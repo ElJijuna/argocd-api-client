@@ -31,3 +31,17 @@ export interface ArgoCdRepositoryList {
   /** Repositories returned by Argo CD. */
   items: ArgoCdRepository[];
 }
+
+/** A single Git ref (branch, tag, or commit). */
+export interface ArgoCdRepositoryRef {
+  /** Ref name, e.g. `refs/heads/main`. */
+  name?: string;
+}
+
+/** Response for the repository refs endpoint. */
+export interface ArgoCdRepositoryRefs {
+  /** Branch refs. */
+  branches?: string[];
+  /** Tag refs. */
+  tags?: string[];
+}

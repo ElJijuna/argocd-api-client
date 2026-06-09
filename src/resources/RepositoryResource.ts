@@ -1,4 +1,8 @@
-import type { ArgoCdRepository, ArgoCdRepositoryList } from '../domain/repository';
+import type {
+  ArgoCdRepository,
+  ArgoCdRepositoryList,
+  ArgoCdRepositoryRefs,
+} from '../domain/repository';
 import type { BodyRequestFn, EmptyBodyRequestFn, RequestFn } from './types';
 
 /** Methods for Argo CD repository credentials and repository metadata. */
@@ -33,6 +37,15 @@ export class RepositoryResource {
   async deleteByRepo(repo: string, signal?: AbortSignal): Promise<Record<string, never>> {
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/repositories/${encodeURIComponent(repo)}`,
+      signal,
+    );
+  }
+
+  /** Returns branches and tags for a repository. */
+  async refs(repo: string, signal?: AbortSignal): Promise<ArgoCdRepositoryRefs> {
+    return this.request<ArgoCdRepositoryRefs>(
+      `/api/v1/repositories/${encodeURIComponent(repo)}/refs`,
+      undefined,
       signal,
     );
   }

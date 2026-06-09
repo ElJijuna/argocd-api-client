@@ -14,16 +14,16 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications` | ✅ |
 | `POST` | `/applications` | ✅ |
 | `GET` | `/applications/{name}` | ✅ |
-| `PUT` | `/applications/{name}` | 🔜 |
+| `PUT` | `/applications/{name}` | ✅ |
 | `DELETE` | `/applications/{name}` | ✅ |
 | `PATCH` | `/applications/{name}` | ✅ |
 | `POST` | `/applications/{name}/sync` | ✅ |
 | `DELETE` | `/applications/{name}/sync` | 🔜 |
-| `GET` | `/applications/{name}/logs` | 🔜 |
-| `GET` | `/applications/{name}/resource-tree` | 🔜 |
-| `GET` | `/applications/{name}/managed-resources` | 🔜 |
+| `GET` | `/applications/{name}/logs` | ✅ |
+| `GET` | `/applications/{name}/resource-tree` | ✅ |
+| `GET` | `/applications/{name}/managed-resources` | ✅ |
 | `DELETE` | `/applications/{name}/managed-resources` | 🔜 |
-| `POST` | `/applications/{name}/rollback` | 🔜 |
+| `POST` | `/applications/{name}/rollback` | ✅ |
 | `POST` | `/applications/{name}/wait` | 🔜 |
 | `POST` | `/applications/{name}/revisions/{revision}/metadata` | 🔜 |
 
@@ -46,7 +46,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/repositories/{repo}` | ✅ |
 | `DELETE` | `/repositories/{repo}` | ✅ |
 | `GET` | `/repositories/{repo}/apps` | 🔜 |
-| `GET` | `/repositories/{repo}/refs` | 🔜 |
+| `GET` | `/repositories/{repo}/refs` | ✅ |
 
 ### ClusterService
 | Method | Endpoint | Status |
@@ -54,7 +54,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/clusters` | ✅ |
 | `POST` | `/clusters` | ✅ |
 | `GET` | `/clusters/{server}` | ✅ |
-| `PUT` | `/clusters/{server}` | 🔜 |
+| `PUT` | `/clusters/{server}` | ✅ |
 | `DELETE` | `/clusters/{server}` | ✅ |
 | `GET` | `/clusters/{server}/invalidate-cache` | 🔜 |
 
@@ -83,11 +83,11 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 ### ApplicationSetService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/applicationsets` | 🔜 |
-| `POST` | `/applicationsets` | 🔜 |
-| `GET` | `/applicationsets/{name}` | 🔜 |
-| `PUT` | `/applicationsets/{name}` | 🔜 |
-| `DELETE` | `/applicationsets/{name}` | 🔜 |
+| `GET` | `/applicationsets` | ✅ |
+| `POST` | `/applicationsets` | ✅ |
+| `GET` | `/applicationsets/{name}` | ✅ |
+| `PUT` | `/applicationsets/{name}` | ✅ |
+| `DELETE` | `/applicationsets/{name}` | ✅ |
 
 ### RepoCredsService
 | Method | Endpoint | Status |

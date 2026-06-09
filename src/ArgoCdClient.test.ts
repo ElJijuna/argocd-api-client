@@ -470,5 +470,183 @@ describe('ArgoCdClient', () => {
       expect(events[0].method).toBe('DELETE');
       expect(events[0].error).toBeInstanceOf(ArgoCdApiError);
     });
+
+    it('updates an application via PUT', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.update('guestbook', { metadata: { name: 'guestbook' } });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
+    });
+
+    it('rolls back an application', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.rollback('guestbook', { id: 3 });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/rollback');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('returns the resource tree', async () => {
+      mockJson({ nodes: [{ kind: 'Deployment', name: 'guestbook' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const tree = await client.applications.resourceTree('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
+      expect(tree.nodes?.[0].kind).toBe('Deployment');
+    });
+
+    it('returns managed resources', async () => {
+      mockJson({ items: [{ kind: 'Deployment', name: 'guestbook' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const resources = await client.applications.managedResources('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain(
+        '/api/v1/applications/guestbook/managed-resources',
+      );
+      expect(resources[0].kind).toBe('Deployment');
+    });
+
+    it('returns empty array when managed-resources items is absent', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const resources = await client.applications.managedResources('guestbook');
+
+      expect(resources).toEqual([]);
+    });
+
+    it('parses NDJSON logs and returns log entries', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            [
+              JSON.stringify({ result: { content: 'line 1', podName: 'pod-abc' }, error: null }),
+              JSON.stringify({ result: { content: 'line 2', podName: 'pod-abc' }, error: null }),
+            ].join('\n'),
+          ),
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const logs = await client.applications.logs('guestbook', { tailLines: 2 });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/logs');
+      expect(logs).toHaveLength(2);
+      expect(logs[0].content).toBe('line 1');
+      expect(logs[1].content).toBe('line 2');
+    });
+
+    it('skips NDJSON lines with error field', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            [
+              JSON.stringify({ result: { content: 'good line' }, error: null }),
+              JSON.stringify({ result: null, error: 'EOF' }),
+            ].join('\n'),
+          ),
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const logs = await client.applications.logs('guestbook');
+
+      expect(logs).toHaveLength(1);
+      expect(logs[0].content).toBe('good line');
+    });
+
+    it('updates a cluster via PUT', async () => {
+      mockJson({ name: 'prod', server: 'https://prod.k8s.io' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.clusters.update('https://prod.k8s.io', { name: 'prod' });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/clusters/');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
+    });
+
+    it('returns repository refs', async () => {
+      mockJson({ branches: ['main', 'develop'], tags: ['v1.0.0'] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const refs = await client.repositories.refs('https://github.com/acme/app.git');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repositories/');
+      expect(mockFetch.mock.calls[0][0]).toContain('/refs');
+      expect(refs.branches).toEqual(['main', 'develop']);
+      expect(refs.tags).toEqual(['v1.0.0']);
+    });
+
+    it('lists ApplicationSets', async () => {
+      mockJson({ items: [{ metadata: { name: 'my-set' } }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const sets = await client.applicationSets.list();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/applicationsets');
+      expect(sets.items[0].metadata?.name).toBe('my-set');
+    });
+
+    it('gets an ApplicationSet', async () => {
+      mockJson({ metadata: { name: 'my-set' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applicationSets.get('my-set');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applicationsets/my-set');
+    });
+
+    it('creates an ApplicationSet', async () => {
+      mockJson({ metadata: { name: 'my-set' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applicationSets.create({ metadata: { name: 'my-set' } });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('updates an ApplicationSet', async () => {
+      mockJson({ metadata: { name: 'my-set' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applicationSets.update('my-set', { metadata: { name: 'my-set' } });
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
+    });
+
+    it('deletes an ApplicationSet', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applicationSets.deleteByName('my-set');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('emits request event for logs (ndJson path)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(JSON.stringify({ result: { content: 'hello' }, error: null })),
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const events: import('./ArgoCdClient').RequestEvent[] = [];
+
+      client.on('request', (e) => events.push(e));
+
+      await client.applications.logs('guestbook');
+
+      expect(events).toHaveLength(1);
+      expect(events[0].method).toBe('GET');
+      expect(events[0].statusCode).toBe(200);
+    });
   });
 });

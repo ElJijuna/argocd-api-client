@@ -54,14 +54,56 @@ The client stores the credentials internally and automatically refreshes the ses
 ## Resources
 
 ```typescript
-await argocd.applications.list();
+// Applications
+await argocd.applications.list({ project: ['default'] });
 await argocd.applications.get('guestbook', { project: 'default' });
+await argocd.applications.create({ metadata: { name: 'guestbook' } });
+await argocd.applications.update('guestbook', { metadata: { name: 'guestbook' } });
+await argocd.applications.patch('guestbook', { spec: {} });
 await argocd.applications.sync('guestbook', { revision: 'main' });
+await argocd.applications.rollback('guestbook', { id: 3 });
+await argocd.applications.deleteByName('guestbook');
 
+// Application observability
+const tree = await argocd.applications.resourceTree('guestbook');
+const managed = await argocd.applications.managedResources('guestbook');
+const logs = await argocd.applications.logs('guestbook', { container: 'main', tailLines: 100 });
+// logs → ArgoCdLogEntry[]  (streamed NDJSON, returned as an array)
+
+// ApplicationSets
+await argocd.applicationSets.list();
+await argocd.applicationSets.get('my-set');
+await argocd.applicationSets.create({ metadata: { name: 'my-set' } });
+await argocd.applicationSets.update('my-set', { metadata: { name: 'my-set' } });
+await argocd.applicationSets.deleteByName('my-set');
+
+// Projects
 await argocd.projects.list();
+await argocd.projects.get('default');
+await argocd.projects.create({ metadata: { name: 'default' } });
+await argocd.projects.update('default', { metadata: { name: 'default' } });
+await argocd.projects.deleteByName('default');
+
+// Repositories
 await argocd.repositories.list();
+await argocd.repositories.get('https://github.com/acme/app.git');
+await argocd.repositories.create({ repo: 'https://github.com/acme/app.git' });
+await argocd.repositories.refs('https://github.com/acme/app.git');
+await argocd.repositories.deleteByRepo('https://github.com/acme/app.git');
+
+// Clusters
 await argocd.clusters.list();
+await argocd.clusters.get('https://kubernetes.default.svc');
+await argocd.clusters.create({ name: 'prod', server: 'https://prod.k8s.io' });
+await argocd.clusters.update('https://prod.k8s.io', { name: 'prod' });
+await argocd.clusters.deleteByServer('https://kubernetes.default.svc');
+
+// Accounts
 await argocd.accounts.list();
+await argocd.accounts.get('admin');
+await argocd.accounts.canI('applications', 'get', '*');
+await argocd.accounts.updatePassword({ name: 'admin', currentPassword: 'old', newPassword: 'new' });
+await argocd.accounts.deleteToken('admin', 'token-id');
 ```
 
 ## Abort Requests
@@ -352,13 +394,14 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 
 ## API Coverage
 
-Initial client covers common official REST resources:
+| Service | Methods |
+| --- | --- |
+| `SessionService` | `createSession` |
+| `ApplicationService` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `resourceTree` · `managedResources` · `logs` |
+| `ApplicationSetService` | `list` · `get` · `create` · `update` · `deleteByName` |
+| `ProjectService` | `list` · `get` · `create` · `update` · `deleteByName` |
+| `RepositoryService` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
+| `ClusterService` | `list` · `get` · `create` · `update` · `deleteByServer` |
+| `AccountService` | `list` · `get` · `canI` · `updatePassword` · `deleteToken` |
 
-- `SessionService`: `POST /api/v1/session`
-- `ApplicationService`: list/get/create/delete/patch/sync
-- `ProjectService`: list/get/create/update/delete
-- `RepositoryService`: list/get/create/delete
-- `ClusterService`: list/get/create/delete
-- `AccountService`: list/get/can-i/update-password/delete-token
-
-Types intentionally keep Argo CD/Kubernetes payloads extensible with `Record<string, unknown>` for areas where server versions vary.
+See [ROADMAP.md](ROADMAP.md) for planned additions. Types keep Argo CD/Kubernetes payloads extensible with `Record<string, unknown>` for areas where server versions vary.

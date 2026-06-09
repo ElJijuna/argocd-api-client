@@ -2,6 +2,7 @@ export { ArgoCdClient } from './ArgoCdClient';
 export { ArgoCdApiError } from './errors/ArgoCdApiError';
 export { AccountResource } from './resources/AccountResource';
 export { ApplicationResource } from './resources/ApplicationResource';
+export { ApplicationSetResource } from './resources/ApplicationSetResource';
 export { ClusterResource } from './resources/ClusterResource';
 export { ProjectResource } from './resources/ProjectResource';
 export { RepositoryResource } from './resources/RepositoryResource';
@@ -17,7 +18,19 @@ export type {
   ArgoCdApplicationGetParams,
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
+  ArgoCdApplicationLogsParams,
+  ArgoCdLogEntry,
+  ArgoCdManagedResource,
+  ArgoCdManagedResourcesList,
+  ArgoCdManagedResourcesParams,
+  ArgoCdResourceNode,
+  ArgoCdResourceTree,
 } from './domain/application';
+export type {
+  ArgoCdApplicationSet,
+  ArgoCdApplicationSetList,
+  ArgoCdApplicationSetListParams,
+} from './domain/applicationset';
 export type { KubernetesMetadata, EmptyResponse } from './domain/common';
 export type {
   ArgoCdAccount,
@@ -27,5 +40,10 @@ export type {
 } from './domain/account';
 export type { ArgoCdCluster, ArgoCdClusterList } from './domain/cluster';
 export type { ArgoCdProject, ArgoCdProjectList, ArgoCdProjectListParams } from './domain/project';
-export type { ArgoCdRepository, ArgoCdRepositoryList } from './domain/repository';
+export type {
+  ArgoCdRepository,
+  ArgoCdRepositoryList,
+  ArgoCdRepositoryRef,
+  ArgoCdRepositoryRefs,
+} from './domain/repository';
 export type { QueryParams, QueryValue } from './resources/types';
