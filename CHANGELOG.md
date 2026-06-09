@@ -1,3 +1,11 @@
+# [1.1.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.0.0...v1.1.0) (2026-06-09)
+
+
+### Features
+
+* add request event emission and listener support in ArgoCdClient for improved request tracking ([58aab50](https://github.com/ElJijuna/argocd-api-client/commit/58aab509fd962a0697b67ae3b651a9aac300795e))
+* implement fromCredentials method for ArgoCdClient to simplify authentication and session management ([08444c0](https://github.com/ElJijuna/argocd-api-client/commit/08444c065ae0881990f237592418a4d278561431))
+
 # 1.0.0 (2026-06-07)
 
 
