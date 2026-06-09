@@ -82,6 +82,227 @@ const apps = await argocd.applications.list(
 controller.abort();
 ```
 
+## Express Integration
+
+Install Express and (optionally) its types:
+
+```bash
+npm install express
+npm install -D @types/express
+```
+
+Create a shared client instance and expose Argo CD resources through your own API:
+
+```typescript
+// src/argocd.ts
+import { ArgoCdClient } from 'argocd-api-client';
+
+export const argocd = new ArgoCdClient({
+  baseUrl: process.env.ARGOCD_BASE_URL!,
+  token: process.env.ARGOCD_TOKEN,
+});
+```
+
+```typescript
+// src/routes/apps.ts
+import { Router } from 'express';
+import { argocd } from '../argocd';
+
+const router = Router();
+
+// GET /apps?project=default
+router.get('/', async (req, res, next) => {
+  try {
+    const project = req.query.project
+      ? [String(req.query.project)]
+      : undefined;
+
+    const apps = await argocd.applications.list(
+      { project },
+      req.signal, // forward the request's AbortSignal
+    );
+
+    res.json(apps.items?.map((app) => ({
+      name: app.metadata?.name,
+      namespace: app.metadata?.namespace,
+      health: app.status?.health?.status,
+      sync: app.status?.sync?.status,
+    })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /apps/:name/sync
+router.post('/:name/sync', async (req, res, next) => {
+  try {
+    const result = await argocd.applications.sync(req.params.name, {
+      revision: req.body.revision ?? 'HEAD',
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+```
+
+```typescript
+// src/index.ts
+import express from 'express';
+import appsRouter from './routes/apps';
+
+const app = express();
+app.use(express.json());
+app.use('/apps', appsRouter);
+
+app.listen(3000, () => console.log('Listening on :3000'));
+```
+
+### Environment variables
+
+```env
+ARGOCD_BASE_URL=https://argocd.example.com
+ARGOCD_TOKEN=<jwt>
+```
+
+If you don't have a static token, authenticate once at startup and reuse the session:
+
+```typescript
+import { ArgoCdClient } from 'argocd-api-client';
+
+const base = new ArgoCdClient({ baseUrl: process.env.ARGOCD_BASE_URL! });
+const { token } = await base.createSession({
+  username: process.env.ARGOCD_USER!,
+  password: process.env.ARGOCD_PASS!,
+});
+
+export const argocd = new ArgoCdClient({
+  baseUrl: process.env.ARGOCD_BASE_URL!,
+  token,
+});
+```
+
+### Express + createSession
+
+This pattern exposes a `POST /auth/login` endpoint that exchanges credentials for an Argo CD JWT, then uses that token on every subsequent request via a middleware-created client.
+
+```typescript
+// src/routes/auth.ts
+import { Router } from 'express';
+import { ArgoCdClient } from 'argocd-api-client';
+
+const router = Router();
+
+// POST /auth/login  { "username": "admin", "password": "..." }
+router.post('/login', async (req, res, next) => {
+  try {
+    const { username, password } = req.body as {
+      username: string;
+      password: string;
+    };
+
+    if (!username || !password) {
+      res.status(400).json({ error: 'username and password are required' });
+      return;
+    }
+
+    const client = new ArgoCdClient({ baseUrl: process.env.ARGOCD_BASE_URL! });
+    const { token } = await client.createSession({ username, password });
+
+    res.json({ token });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+```
+
+```typescript
+// src/middleware/argocd.ts
+import { RequestHandler } from 'express';
+import { ArgoCdClient } from 'argocd-api-client';
+
+declare global {
+  namespace Express {
+    interface Request {
+      argocd: ArgoCdClient;
+    }
+  }
+}
+
+export const argocdMiddleware: RequestHandler = (req, res, next) => {
+  const auth = req.headers.authorization;
+
+  if (!auth?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    return;
+  }
+
+  req.argocd = new ArgoCdClient({
+    baseUrl: process.env.ARGOCD_BASE_URL!,
+    token: auth.slice(7),
+  });
+
+  next();
+};
+```
+
+```typescript
+// src/routes/apps.ts
+import { Router } from 'express';
+import { argocdMiddleware } from '../middleware/argocd';
+
+const router = Router();
+router.use(argocdMiddleware);
+
+// GET /apps
+router.get('/', async (req, res, next) => {
+  try {
+    const apps = await req.argocd.applications.list({}, req.signal);
+    res.json(apps.items?.map((app) => ({
+      name: app.metadata?.name,
+      health: app.status?.health?.status,
+      sync: app.status?.sync?.status,
+    })));
+  } catch (err) {
+    next(err);
+  }
+});
+
+export default router;
+```
+
+```typescript
+// src/index.ts
+import express from 'express';
+import authRouter from './routes/auth';
+import appsRouter from './routes/apps';
+
+const app = express();
+app.use(express.json());
+app.use('/auth', authRouter);
+app.use('/apps', appsRouter); // protected by argocdMiddleware
+
+app.listen(3000, () => console.log('Listening on :3000'));
+```
+
+**Flow:**
+
+```bash
+# 1. Obtain a token
+curl -X POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"secret"}'
+# → { "token": "<jwt>" }
+
+# 2. Use the token in subsequent requests
+curl http://localhost:3000/apps \
+  -H 'Authorization: Bearer <jwt>'
+```
+
 ## Benchmarks
 
 ```bash
