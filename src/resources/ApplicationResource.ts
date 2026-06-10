@@ -35,7 +35,22 @@ export class ApplicationResource {
     private readonly ndJson: NdJsonRequestFn,
   ) {}
 
-  /** Lists applications, optionally filtered by project, selector, repo, or namespace. */
+  /**
+   * Lists Argo CD applications, optionally filtered by project, label selector, repo, or namespace.
+   *
+   * @param params - Optional filters: `project`, `selector`, `repo`, `appNamespace`, etc.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Paginated list of applications.
+   *
+   * @example
+   * // All apps in a project
+   * const { items } = await argocd.applications.list({ project: ['default'] });
+   * console.log(items.map(a => a.metadata?.name));
+   *
+   * @example
+   * // Filter by label selector
+   * const { items } = await argocd.applications.list({ selector: 'env=prod' });
+   */
   async list(
     params: ArgoCdApplicationListParams = {},
     signal?: AbortSignal,
@@ -43,7 +58,22 @@ export class ApplicationResource {
     return this.request<ArgoCdApplicationList>('/api/v1/applications', params, signal);
   }
 
-  /** Gets one application by name. */
+  /**
+   * Gets a single application by name.
+   *
+   * @param name - Application name.
+   * @param params - Optional: `appNamespace`, `project`, `refresh` (`'normal'` | `'hard'`).
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The full application object including `spec` and `status`.
+   *
+   * @example
+   * const app = await argocd.applications.get('guestbook');
+   * console.log(app.status?.health?.status); // 'Healthy'
+   *
+   * @example
+   * // Force hard refresh before returning
+   * const app = await argocd.applications.get('guestbook', { refresh: 'hard' });
+   */
   async get(
     name: string,
     params: ArgoCdApplicationGetParams = {},
@@ -56,12 +86,41 @@ export class ApplicationResource {
     );
   }
 
-  /** Creates an application. */
+  /**
+   * Creates a new Argo CD application.
+   *
+   * @param application - Application manifest. At minimum `metadata.name` and `spec` are required.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The created application as stored by Argo CD.
+   *
+   * @example
+   * const app = await argocd.applications.create({
+   *   metadata: { name: 'guestbook' },
+   *   spec: {
+   *     project: 'default',
+   *     source: { repoURL: 'https://github.com/acme/guestbook.git', path: 'helm', targetRevision: 'HEAD' },
+   *     destination: { server: 'https://kubernetes.default.svc', namespace: 'guestbook' },
+   *   },
+   * });
+   */
   async create(application: ArgoCdApplication, signal?: AbortSignal): Promise<ArgoCdApplication> {
     return this.post<ArgoCdApplication>('/api/v1/applications', { application }, signal);
   }
 
-  /** Updates an application by name (full replace). */
+  /**
+   * Replaces an application (full PUT). Use {@link patch} for partial updates.
+   *
+   * @param name - Application name.
+   * @param application - Complete application manifest to replace the current one.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The updated application.
+   *
+   * @example
+   * const updated = await argocd.applications.update('guestbook', {
+   *   metadata: { name: 'guestbook' },
+   *   spec: { /* full spec *\/ },
+   * });
+   */
   async update(
     name: string,
     application: ArgoCdApplication,
@@ -74,7 +133,16 @@ export class ApplicationResource {
     );
   }
 
-  /** Deletes an application by name. */
+  /**
+   * Deletes an application by name.
+   *
+   * @param name - Application name.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Empty object on success.
+   *
+   * @example
+   * await argocd.applications.deleteByName('guestbook');
+   */
   async deleteByName(name: string, signal?: AbortSignal): Promise<Record<string, never>> {
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/applications/${encodeURIComponent(name)}`,
@@ -82,7 +150,20 @@ export class ApplicationResource {
     );
   }
 
-  /** Applies a JSON merge patch to an application. */
+  /**
+   * Applies a JSON merge patch to an application. Prefer this over {@link update} for partial changes.
+   *
+   * @param name - Application name.
+   * @param patch - Partial application object to merge. Only provided fields are changed.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The patched application.
+   *
+   * @example
+   * // Change only the sync policy
+   * const app = await argocd.applications.patch('guestbook', {
+   *   spec: { syncPolicy: { automated: { prune: true, selfHeal: true } } },
+   * });
+   */
   async patch(name: string, patch: unknown, signal?: AbortSignal): Promise<ArgoCdApplication> {
     return this.patchRequest<ArgoCdApplication>(
       `/api/v1/applications/${encodeURIComponent(name)}`,
@@ -91,7 +172,22 @@ export class ApplicationResource {
     );
   }
 
-  /** Starts a sync operation for an application. */
+  /**
+   * Triggers a sync for an application, reconciling live state with the desired Git state.
+   *
+   * @param name - Application name.
+   * @param body - Optional sync options: `revision`, `prune`, `dryRun`, `resources`, etc.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The application after sync is initiated.
+   *
+   * @example
+   * // Sync to HEAD
+   * await argocd.applications.sync('guestbook');
+   *
+   * @example
+   * // Sync to a specific revision with prune
+   * await argocd.applications.sync('guestbook', { revision: 'v2.1.0', prune: true });
+   */
   async sync(
     name: string,
     body: Record<string, unknown> = {},
@@ -104,7 +200,20 @@ export class ApplicationResource {
     );
   }
 
-  /** Rolls back an application to a previous deployment ID. */
+  /**
+   * Rolls back an application to a previous deployment by history ID.
+   *
+   * @param name - Application name.
+   * @param body - Rollback options.
+   * @param body.id - History ID to roll back to (from `app.status.history`).
+   * @param body.prune - Whether to delete resources not present in the target revision.
+   * @param body.dryRun - Simulate without applying changes.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The application after rollback is initiated.
+   *
+   * @example
+   * await argocd.applications.rollback('guestbook', { id: 3 });
+   */
   async rollback(
     name: string,
     body: { id?: number; prune?: boolean; dryRun?: boolean } = {},
@@ -117,7 +226,22 @@ export class ApplicationResource {
     );
   }
 
-  /** Fetches buffered pod logs for an application. */
+  /**
+   * Fetches pod logs for an application. The server streams NDJSON; this method buffers and returns
+   * it as an array. Use `params.follow: false` (default) for a bounded response.
+   *
+   * @param name - Application name.
+   * @param params - Log options: `podName`, `container`, `namespace`, `tailLines`, `sinceSeconds`, `filter`, etc.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of log entries, each with `content`, `timestamp`, `podName`, and `container`.
+   *
+   * @example
+   * const logs = await argocd.applications.logs('guestbook', {
+   *   container: 'api',
+   *   tailLines: 100,
+   * });
+   * logs.forEach(l => console.log(l.content));
+   */
   async logs(
     name: string,
     params: ArgoCdApplicationLogsParams = {},
@@ -130,7 +254,19 @@ export class ApplicationResource {
     );
   }
 
-  /** Returns the live resource tree for an application. */
+  /**
+   * Returns the live Kubernetes resource tree for an application — all nodes (Deployments, ReplicaSets,
+   * Pods, Services…) with health, status, and parent references.
+   *
+   * @param name - Application name.
+   * @param params - Optional `appNamespace` for multi-namespace installs.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Tree with `nodes`, `orphanedNodes`, and `hosts`.
+   *
+   * @example
+   * const tree = await argocd.applications.resourceTree('guestbook');
+   * const pods = tree.nodes?.filter(n => n.kind === 'Pod');
+   */
   async resourceTree(
     name: string,
     params: { appNamespace?: string } = {},
@@ -143,7 +279,23 @@ export class ApplicationResource {
     );
   }
 
-  /** Returns the managed Kubernetes resources for an application. */
+  /**
+   * Returns the managed Kubernetes resources for an application, including their live and target
+   * manifests as JSON strings (`liveState`, `targetState`, `normalizedLiveState`).
+   *
+   * @param name - Application name.
+   * @param params - Optional filters: `kind`, `group`, `namespace`, `resourceName`, `version`, `appNamespace`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of managed resources (empty array if none).
+   *
+   * @example
+   * // All managed resources
+   * const resources = await argocd.applications.managedResources('guestbook');
+   *
+   * @example
+   * // Only Deployments
+   * const deployments = await argocd.applications.managedResources('guestbook', { kind: 'Deployment' });
+   */
   async managedResources(
     name: string,
     params: ArgoCdManagedResourcesParams = {},
@@ -157,12 +309,35 @@ export class ApplicationResource {
     return res.items ?? [];
   }
 
-  /** Refreshes an application using the normal refresh mode. */
+  /**
+   * Triggers a normal refresh and returns the updated application. Convenience wrapper for
+   * `get(name, { refresh: 'normal' })`. Use `get(name, { refresh: 'hard' })` for a hard refresh.
+   *
+   * @param name - Application name.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The refreshed application.
+   *
+   * @example
+   * const app = await argocd.applications.refresh('guestbook');
+   * console.log(app.status?.sync?.status); // 'Synced'
+   */
   async refresh(name: string, signal?: AbortSignal): Promise<ArgoCdApplication> {
     return this.get(name, { refresh: 'normal' }, signal);
   }
 
-  /** Returns the unique container images running across all resources of an application. */
+  /**
+   * Returns the deduplicated list of container images currently running across all resources
+   * of an application. Data sourced from `resourceTree` node `images` fields.
+   *
+   * @param name - Application name.
+   * @param params - Optional `appNamespace` for multi-namespace installs.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of unique image references (e.g. `['my-app:v2.1.0', 'nginx:1.25']`).
+   *
+   * @example
+   * const images = await argocd.applications.images('guestbook');
+   * console.log(images); // ['my-app:v2.1.0', 'redis:7', 'nginx:1.25']
+   */
   async images(
     name: string,
     params: { appNamespace?: string } = {},
@@ -173,7 +348,26 @@ export class ApplicationResource {
     return [...new Set(all)];
   }
 
-  /** Returns the live pods for an application, including container specs and status. */
+  /**
+   * Returns the live pods for an application, parsed from the managed-resources `liveState` manifests.
+   * Each pod includes its phase, node assignment, container specs, and container statuses.
+   *
+   * @param name - Application name.
+   * @param params - Optional filters: `namespace`, `resourceName`, `appNamespace`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of pods, each with `containers` (including `ready` and `restartCount`).
+   *
+   * @example
+   * const pods = await argocd.applications.pods('guestbook');
+   * pods.forEach(p => {
+   *   console.log(p.name, p.phase);            // 'api-abc123' 'Running'
+   *   console.log(p.containers[0].restartCount); // 0
+   * });
+   *
+   * @example
+   * // Filter by namespace
+   * const pods = await argocd.applications.pods('guestbook', { namespace: 'production' });
+   */
   async pods(
     name: string,
     params: ArgoCdPodsParams = {},
@@ -207,7 +401,26 @@ export class ApplicationResource {
       });
   }
 
-  /** Returns all containers flattened from all pods for an application. */
+  /**
+   * Returns all containers across every pod of an application, flattened into a single array.
+   * Each entry includes `podName` as a back-reference. Delegates to {@link pods} internally.
+   *
+   * @param name - Application name.
+   * @param params - Optional filters forwarded to {@link pods}: `namespace`, `resourceName`, `appNamespace`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Flat array of containers with `name`, `image`, `ready`, `restartCount`, `state`, and `podName`.
+   *
+   * @example
+   * const containers = await argocd.applications.containers('guestbook');
+   * containers.forEach(c => {
+   *   console.log(`${c.podName} / ${c.name} — ${c.image} (ready: ${c.ready})`);
+   * });
+   *
+   * @example
+   * // Get logs for the first container
+   * const [c] = await argocd.applications.containers('guestbook');
+   * const logs = await argocd.applications.logs('guestbook', { podName: c.podName, container: c.name });
+   */
   async containers(
     name: string,
     params: ArgoCdPodsParams = {},
@@ -217,7 +430,23 @@ export class ApplicationResource {
     return pods.flatMap((pod) => pod.containers.map((c) => ({ ...c, podName: pod.name })));
   }
 
-  /** Returns the Kubernetes nodes hosting this application's pods, with OS and runtime info. */
+  /**
+   * Returns the Kubernetes nodes that host this application's pods, with OS and container runtime
+   * metadata sourced from the `resourceTree` host list (`NodeSystemInfo`).
+   *
+   * @param name - Application name.
+   * @param params - Optional `appNamespace` for multi-namespace installs.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of nodes, each with `osImage`, `operatingSystem`, `architecture`,
+   *   `kernelVersion`, `containerRuntimeVersion`, and `kubeletVersion`.
+   *
+   * @example
+   * const nodes = await argocd.applications.nodes('guestbook');
+   * nodes.forEach(n => {
+   *   console.log(n.name, n.osImage, n.architecture);
+   *   // 'node-1' 'Ubuntu 22.04 LTS' 'amd64'
+   * });
+   */
   async nodes(
     name: string,
     params: { appNamespace?: string } = {},
@@ -239,7 +468,22 @@ export class ApplicationResource {
     });
   }
 
-  /** Returns the current health status of an application. */
+  /**
+   * Returns the current health status of an application without loading the full object.
+   * Internally calls {@link get} and extracts `status.health`.
+   *
+   * @param name - Application name.
+   * @param params - Optional: `appNamespace`, `project`, `refresh`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns `{ status, message? }` — status is one of `'Healthy'`, `'Degraded'`,
+   *   `'Progressing'`, `'Suspended'`, `'Missing'`, `'Unknown'`.
+   *
+   * @example
+   * const { status, message } = await argocd.applications.health('guestbook');
+   * if (status === 'Degraded') {
+   *   console.warn('App degraded:', message);
+   * }
+   */
   async health(
     name: string,
     params: ArgoCdApplicationGetParams = {},
@@ -255,7 +499,21 @@ export class ApplicationResource {
     };
   }
 
-  /** Returns managed resources whose live state differs from the normalized target state. */
+  /**
+   * Returns only the managed resources whose live state differs from the normalized target state —
+   * i.e. resources that are out of sync. Compares `liveState` vs `normalizedLiveState` strings.
+   *
+   * @param name - Application name.
+   * @param params - Optional filters forwarded to {@link managedResources}: `kind`, `group`, `namespace`, etc.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of out-of-sync resources (empty if fully synced).
+   *
+   * @example
+   * const diffs = await argocd.applications.diff('guestbook');
+   * if (diffs.length > 0) {
+   *   console.warn('Out of sync:', diffs.map(r => `${r.kind}/${r.name}`));
+   * }
+   */
   async diff(
     name: string,
     params: ArgoCdManagedResourcesParams = {},
@@ -267,7 +525,28 @@ export class ApplicationResource {
     );
   }
 
-  /** Returns Kubernetes events for an application or one of its resources. */
+  /**
+   * Returns Kubernetes events for an application or a specific resource within it.
+   * Useful for diagnosing crash loops, image pull failures, OOM kills, and scheduling issues.
+   *
+   * @param name - Application name.
+   * @param params - Optional filters: `resourceName`, `resourceNamespace`, `resourceUID`, `appNamespace`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Array of events, each with `reason`, `message`, `type` (`'Normal'` | `'Warning'`),
+   *   `count`, `firstTimestamp`, `lastTimestamp`, `involvedObject`, and `source`.
+   *
+   * @example
+   * // All events for the app
+   * const events = await argocd.applications.events('guestbook');
+   * const warnings = events.filter(e => e.type === 'Warning');
+   *
+   * @example
+   * // Events for a specific pod
+   * const events = await argocd.applications.events('guestbook', {
+   *   resourceName: 'api-abc123',
+   *   resourceNamespace: 'default',
+   * });
+   */
   async events(
     name: string,
     params: ArgoCdEventsParams = {},
