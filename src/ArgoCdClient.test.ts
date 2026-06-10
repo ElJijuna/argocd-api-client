@@ -33,6 +33,28 @@ describe('ArgoCdClient', () => {
     });
   });
 
+  it('deletes the current session (logout)', async () => {
+    mockJson({});
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+    await client.deleteSession();
+
+    expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/session');
+    expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('returns userinfo for the authenticated user', async () => {
+    mockJson({ loggedIn: true, username: 'admin', iss: 'argocd', groups: ['admins'] });
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+    const info = await client.userInfo();
+
+    expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/session/userinfo');
+    expect(info.loggedIn).toBe(true);
+    expect(info.username).toBe('admin');
+    expect(info.groups).toEqual(['admins']);
+  });
+
   it('lists applications with bearer auth and query params', async () => {
     mockJson({ items: [{ metadata: { name: 'guestbook' } }] });
     const client = new ArgoCdClient({

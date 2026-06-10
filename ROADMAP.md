@@ -24,6 +24,8 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/managed-resources` | ✅ |
 | `DELETE` | `/applications/{name}/managed-resources` | 🔜 |
 | `POST` | `/applications/{name}/rollback` | ✅ |
+| `GET` | `/applications/{name}/refresh` | ✅ `refresh()` |
+| `GET` | `/applications/{name}/events` | ✅ `events()` |
 | `POST` | `/applications/{name}/wait` | 🔜 |
 | `POST` | `/applications/{name}/revisions/{revision}/metadata` | 🔜 |
 
@@ -73,8 +75,8 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | Method | Endpoint | Status |
 | --- | --- | --- |
 | `POST` | `/session` | ✅ |
-| `DELETE` | `/session` | 🔜 |
-| `GET` | `/session/userinfo` | 🔜 |
+| `DELETE` | `/session` | ✅ `deleteSession()` |
+| `GET` | `/session/userinfo` | ✅ `userInfo()` |
 
 ---
 

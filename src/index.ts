@@ -12,7 +12,7 @@ export type {
   ArgoCdClientEvents,
   RequestEvent,
 } from './ArgoCdClient';
-export type { ArgoCdSession, ArgoCdSessionRequest } from './domain/session';
+export type { ArgoCdSession, ArgoCdSessionRequest, ArgoCdUserInfo } from './domain/session';
 export type {
   ArgoCdApplication,
   ArgoCdApplicationGetParams,

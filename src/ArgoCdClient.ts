@@ -1,4 +1,4 @@
-import type { ArgoCdSession, ArgoCdSessionRequest } from './domain/session';
+import type { ArgoCdSession, ArgoCdSessionRequest, ArgoCdUserInfo } from './domain/session';
 import { ArgoCdApiError } from './errors/ArgoCdApiError';
 import { AccountResource } from './resources/AccountResource';
 import { ApplicationResource } from './resources/ApplicationResource';
@@ -164,6 +164,36 @@ export class ArgoCdClient {
    */
   async createSession(body: ArgoCdSessionRequest, signal?: AbortSignal): Promise<ArgoCdSession> {
     return this.post<ArgoCdSession>('/api/v1/session', body, signal);
+  }
+
+  /**
+   * Invalidates the current session token on the Argo CD server (logout).
+   * Does not clear the token stored in this client instance.
+   *
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns Empty object on success.
+   *
+   * @example
+   * await argocd.deleteSession();
+   */
+  async deleteSession(signal?: AbortSignal): Promise<Record<string, never>> {
+    return this.emptyRequest<Record<string, never>>('DELETE', '/api/v1/session', signal);
+  }
+
+  /**
+   * Returns info about the currently authenticated user.
+   *
+   * `GET /api/v1/session/userinfo`
+   *
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns `{ loggedIn, username, iss, groups }`.
+   *
+   * @example
+   * const info = await argocd.userInfo();
+   * console.log(info.username, info.groups);
+   */
+  async userInfo(signal?: AbortSignal): Promise<ArgoCdUserInfo> {
+    return this.request<ArgoCdUserInfo>('/api/v1/session/userinfo', {}, signal);
   }
 
   private authHeaders(includeContentType?: boolean) {

@@ -126,6 +126,13 @@ await argocd.accounts.get('admin');
 await argocd.accounts.canI('applications', 'get', '*');
 await argocd.accounts.updatePassword({ name: 'admin', currentPassword: 'old', newPassword: 'new' });
 await argocd.accounts.deleteToken('admin', 'token-id');
+
+// Session
+await argocd.userInfo();
+// → ArgoCdUserInfo  { loggedIn, username, iss, groups }
+
+await argocd.deleteSession();
+// Invalidates the current token on the server (logout)
 ```
 
 ## Abort Requests
@@ -418,7 +425,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 
 | Service | Methods |
 | --- | --- |
-| `SessionService` | `createSession` |
+| `SessionService` | `createSession` · `deleteSession` · `userInfo` |
 | `ApplicationService` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `list` · `get` · `create` · `update` · `deleteByName` |
