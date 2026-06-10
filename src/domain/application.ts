@@ -170,3 +170,105 @@ export interface ArgoCdManagedResourcesList {
   /** Managed resources. */
   items?: ArgoCdManagedResource[];
 }
+
+/** Health status of an application. */
+export interface ArgoCdApplicationHealth {
+  /** Argo CD health status string. */
+  status: 'Healthy' | 'Degraded' | 'Progressing' | 'Suspended' | 'Missing' | 'Unknown' | string;
+  /** Human-readable message explaining the status. */
+  message?: string;
+}
+
+/** A single container within a pod. */
+export interface ArgoCdContainer {
+  /** Container name. */
+  name: string;
+  /** Container image reference. */
+  image: string;
+  /** Whether the container passed its readiness probe. */
+  ready?: boolean;
+  /** Number of times the container has restarted. */
+  restartCount?: number;
+  /** Current container state (running, waiting, terminated). */
+  state?: Record<string, unknown>;
+  /** Name of the pod this container belongs to — set by containers(). */
+  podName?: string;
+}
+
+/** A live pod managed by an application. */
+export interface ArgoCdPod {
+  /** Pod name. */
+  name?: string;
+  /** Pod namespace. */
+  namespace?: string;
+  /** Pod phase (Running, Pending, Failed, Succeeded, Unknown). */
+  phase?: string;
+  /** Name of the node the pod is scheduled on. */
+  nodeName?: string;
+  /** Regular containers in the pod. */
+  containers: ArgoCdContainer[];
+  /** Init containers in the pod. */
+  initContainers?: ArgoCdContainer[];
+}
+
+/** A Kubernetes node hosting application pods, with OS and runtime metadata. */
+export interface ArgoCdNode {
+  /** Node name. */
+  name?: string;
+  /** Human-readable OS image string (e.g. "Ubuntu 22.04 LTS"). */
+  osImage?: string;
+  /** Operating system family (e.g. "linux"). */
+  operatingSystem?: string;
+  /** CPU architecture (e.g. "amd64", "arm64"). */
+  architecture?: string;
+  /** Linux kernel version. */
+  kernelVersion?: string;
+  /** Container runtime and version (e.g. "containerd://1.7.0"). */
+  containerRuntimeVersion?: string;
+  /** Kubelet version running on the node. */
+  kubeletVersion?: string;
+  /** Full NodeSystemInfo object from the Kubernetes API. */
+  systemInfo?: Record<string, unknown>;
+}
+
+/** A Kubernetes event associated with an application or one of its resources. */
+export interface ArgoCdEvent {
+  /** Short machine-readable reason for the event (e.g. "Pulled", "OOMKilling"). */
+  reason?: string;
+  /** Human-readable event message. */
+  message?: string;
+  /** Event type: Normal or Warning. */
+  type?: 'Normal' | 'Warning' | string;
+  /** Number of times this event has occurred. */
+  count?: number;
+  /** Timestamp of the first occurrence. */
+  firstTimestamp?: string;
+  /** Timestamp of the most recent occurrence. */
+  lastTimestamp?: string;
+  /** The Kubernetes object this event refers to. */
+  involvedObject?: { kind?: string; name?: string; namespace?: string; uid?: string };
+  /** Component that generated the event. */
+  source?: { component?: string; host?: string };
+}
+
+/** Query parameters for pods() and containers(). */
+export interface ArgoCdPodsParams extends QueryParams {
+  /** Application namespace for multi-namespace installs. */
+  appNamespace?: string;
+  /** Filter pods by namespace. */
+  namespace?: string;
+  /** Filter by pod name. */
+  resourceName?: string;
+}
+
+/** Query parameters for events(). */
+export interface ArgoCdEventsParams extends QueryParams {
+  /** Application namespace for multi-namespace installs. */
+  appNamespace?: string;
+  /** Namespace of the involved resource. */
+  resourceNamespace?: string;
+  /** Name of the involved resource. */
+  resourceName?: string;
+  /** UID of the involved resource. */
+  resourceUID?: string;
+}

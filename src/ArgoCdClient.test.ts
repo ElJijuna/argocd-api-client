@@ -563,6 +563,211 @@ describe('ArgoCdClient', () => {
       expect(logs[0].content).toBe('good line');
     });
 
+    it('returns unique images from resource tree nodes', async () => {
+      mockJson({
+        nodes: [
+          { kind: 'Deployment', name: 'api', images: ['my-app:v1', 'sidecar:latest'] },
+          { kind: 'Pod', name: 'api-abc', images: ['my-app:v1'] },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const images = await client.applications.images('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
+      expect(images).toEqual(['my-app:v1', 'sidecar:latest']);
+    });
+
+    it('returns empty images array when nodes have no images', async () => {
+      mockJson({ nodes: [{ kind: 'Deployment', name: 'api' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const images = await client.applications.images('guestbook');
+
+      expect(images).toEqual([]);
+    });
+
+    it('returns pods parsed from managed resources liveState', async () => {
+      const podManifest = {
+        metadata: { name: 'api-abc123', namespace: 'default' },
+        spec: {
+          nodeName: 'node-1',
+          containers: [{ name: 'api', image: 'my-app:v1' }],
+        },
+        status: {
+          phase: 'Running',
+          containerStatuses: [
+            { name: 'api', ready: true, restartCount: 2, state: { running: {} } },
+          ],
+        },
+      };
+      mockJson({
+        items: [{ kind: 'Pod', name: 'api-abc123', liveState: JSON.stringify(podManifest) }],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const pods = await client.applications.pods('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain(
+        '/api/v1/applications/guestbook/managed-resources',
+      );
+      expect(mockFetch.mock.calls[0][0]).toContain('kind=Pod');
+      expect(pods).toHaveLength(1);
+      expect(pods[0].name).toBe('api-abc123');
+      expect(pods[0].phase).toBe('Running');
+      expect(pods[0].nodeName).toBe('node-1');
+      expect(pods[0].containers[0].name).toBe('api');
+      expect(pods[0].containers[0].image).toBe('my-app:v1');
+      expect(pods[0].containers[0].ready).toBe(true);
+      expect(pods[0].containers[0].restartCount).toBe(2);
+    });
+
+    it('skips managed resources without liveState when returning pods', async () => {
+      mockJson({ items: [{ kind: 'Pod', name: 'api-abc123' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const pods = await client.applications.pods('guestbook');
+
+      expect(pods).toEqual([]);
+    });
+
+    it('returns containers flattened from pods with podName back-reference', async () => {
+      const podManifest = {
+        metadata: { name: 'api-abc123', namespace: 'default' },
+        spec: {
+          containers: [
+            { name: 'api', image: 'my-app:v1' },
+            { name: 'sidecar', image: 'proxy:v2' },
+          ],
+        },
+        status: { phase: 'Running', containerStatuses: [] },
+      };
+      mockJson({ items: [{ kind: 'Pod', liveState: JSON.stringify(podManifest) }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const containers = await client.applications.containers('guestbook');
+
+      expect(containers).toHaveLength(2);
+      expect(containers[0].name).toBe('api');
+      expect(containers[0].podName).toBe('api-abc123');
+      expect(containers[1].name).toBe('sidecar');
+      expect(containers[1].podName).toBe('api-abc123');
+    });
+
+    it('returns nodes with OS info from resource tree hosts', async () => {
+      mockJson({
+        nodes: [],
+        hosts: [
+          {
+            name: 'node-1',
+            systemInfo: {
+              osImage: 'Ubuntu 22.04 LTS',
+              operatingSystem: 'linux',
+              architecture: 'amd64',
+              kernelVersion: '5.15.0',
+              containerRuntimeVersion: 'containerd://1.7.0',
+              kubeletVersion: 'v1.28.0',
+            },
+          },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const nodes = await client.applications.nodes('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
+      expect(nodes).toHaveLength(1);
+      expect(nodes[0].name).toBe('node-1');
+      expect(nodes[0].osImage).toBe('Ubuntu 22.04 LTS');
+      expect(nodes[0].operatingSystem).toBe('linux');
+      expect(nodes[0].architecture).toBe('amd64');
+      expect(nodes[0].kernelVersion).toBe('5.15.0');
+      expect(nodes[0].containerRuntimeVersion).toBe('containerd://1.7.0');
+      expect(nodes[0].kubeletVersion).toBe('v1.28.0');
+    });
+
+    it('returns empty nodes array when hosts is absent', async () => {
+      mockJson({ nodes: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const nodes = await client.applications.nodes('guestbook');
+
+      expect(nodes).toEqual([]);
+    });
+
+    it('returns health status from application status.health', async () => {
+      mockJson({ status: { health: { status: 'Degraded', message: 'OOMKilled' } } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const health = await client.applications.health('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook');
+      expect(health.status).toBe('Degraded');
+      expect(health.message).toBe('OOMKilled');
+    });
+
+    it('returns Unknown health status when status.health is absent', async () => {
+      mockJson({ status: {} });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const health = await client.applications.health('guestbook');
+
+      expect(health.status).toBe('Unknown');
+      expect(health.message).toBeUndefined();
+    });
+
+    it('returns only resources with differing live and normalized state', async () => {
+      mockJson({
+        items: [
+          { kind: 'Deployment', name: 'api', liveState: '{"x":1}', normalizedLiveState: '{"x":2}' },
+          {
+            kind: 'Service',
+            name: 'api-svc',
+            liveState: '{"x":1}',
+            normalizedLiveState: '{"x":1}',
+          },
+          { kind: 'ConfigMap', name: 'cfg' },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const diffs = await client.applications.diff('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain(
+        '/api/v1/applications/guestbook/managed-resources',
+      );
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0].name).toBe('api');
+    });
+
+    it('returns events from the events endpoint', async () => {
+      mockJson({
+        items: [
+          { reason: 'Pulled', message: 'Image pulled', type: 'Normal', count: 1 },
+          { reason: 'OOMKilling', message: 'Out of memory', type: 'Warning', count: 3 },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const events = await client.applications.events('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/events');
+      expect(events).toHaveLength(2);
+      expect(events[0].reason).toBe('Pulled');
+      expect(events[0].type).toBe('Normal');
+      expect(events[1].reason).toBe('OOMKilling');
+      expect(events[1].count).toBe(3);
+    });
+
+    it('returns empty events array when items is absent', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const events = await client.applications.events('guestbook');
+
+      expect(events).toEqual([]);
+    });
+
     it('updates a cluster via PUT', async () => {
       mockJson({ name: 'prod', server: 'https://prod.k8s.io' });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });

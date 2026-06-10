@@ -1,13 +1,20 @@
 import type {
   ArgoCdApplication,
   ArgoCdApplicationGetParams,
+  ArgoCdApplicationHealth,
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
   ArgoCdApplicationLogsParams,
+  ArgoCdContainer,
+  ArgoCdEvent,
+  ArgoCdEventsParams,
   ArgoCdLogEntry,
   ArgoCdManagedResource,
   ArgoCdManagedResourcesList,
   ArgoCdManagedResourcesParams,
+  ArgoCdNode,
+  ArgoCdPod,
+  ArgoCdPodsParams,
   ArgoCdResourceTree,
 } from '../domain/application';
 import type { BodyRequestFn, EmptyBodyRequestFn, NdJsonRequestFn, RequestFn } from './types';
@@ -153,5 +160,124 @@ export class ApplicationResource {
   /** Refreshes an application using the normal refresh mode. */
   async refresh(name: string, signal?: AbortSignal): Promise<ArgoCdApplication> {
     return this.get(name, { refresh: 'normal' }, signal);
+  }
+
+  /** Returns the unique container images running across all resources of an application. */
+  async images(
+    name: string,
+    params: { appNamespace?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const tree = await this.resourceTree(name, params, signal);
+    const all = (tree.nodes ?? []).flatMap((n) => n.images ?? []);
+    return [...new Set(all)];
+  }
+
+  /** Returns the live pods for an application, including container specs and status. */
+  async pods(
+    name: string,
+    params: ArgoCdPodsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdPod[]> {
+    const resources = await this.managedResources(name, { ...params, kind: 'Pod' }, signal);
+    return resources
+      .filter((r) => r.liveState)
+      .map((r) => {
+        const manifest = JSON.parse(r.liveState!);
+        const containerStatuses: Array<Record<string, unknown>> =
+          manifest.status?.containerStatuses ?? [];
+        const toContainer = (c: Record<string, unknown>): ArgoCdContainer => {
+          const cs = containerStatuses.find((s) => s['name'] === c['name']) ?? {};
+          return {
+            name: c['name'] as string,
+            image: c['image'] as string,
+            ready: cs['ready'] as boolean | undefined,
+            restartCount: cs['restartCount'] as number | undefined,
+            state: cs['state'] as Record<string, unknown> | undefined,
+          };
+        };
+        return {
+          name: manifest.metadata?.name,
+          namespace: manifest.metadata?.namespace,
+          phase: manifest.status?.phase,
+          nodeName: manifest.spec?.nodeName,
+          containers: (manifest.spec?.containers ?? []).map(toContainer),
+          initContainers: manifest.spec?.initContainers?.map(toContainer),
+        };
+      });
+  }
+
+  /** Returns all containers flattened from all pods for an application. */
+  async containers(
+    name: string,
+    params: ArgoCdPodsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdContainer[]> {
+    const pods = await this.pods(name, params, signal);
+    return pods.flatMap((pod) => pod.containers.map((c) => ({ ...c, podName: pod.name })));
+  }
+
+  /** Returns the Kubernetes nodes hosting this application's pods, with OS and runtime info. */
+  async nodes(
+    name: string,
+    params: { appNamespace?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdNode[]> {
+    const tree = await this.resourceTree(name, params, signal);
+    return (tree.hosts ?? []).map((h) => {
+      const sys = h['systemInfo'] as Record<string, unknown> | undefined;
+      return {
+        name: h['name'] as string | undefined,
+        osImage: sys?.['osImage'] as string | undefined,
+        operatingSystem: sys?.['operatingSystem'] as string | undefined,
+        architecture: sys?.['architecture'] as string | undefined,
+        kernelVersion: sys?.['kernelVersion'] as string | undefined,
+        containerRuntimeVersion: sys?.['containerRuntimeVersion'] as string | undefined,
+        kubeletVersion: sys?.['kubeletVersion'] as string | undefined,
+        systemInfo: sys,
+      };
+    });
+  }
+
+  /** Returns the current health status of an application. */
+  async health(
+    name: string,
+    params: ArgoCdApplicationGetParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationHealth> {
+    const app = await this.get(name, params, signal);
+    const h = (app.status as Record<string, unknown> | undefined)?.['health'] as
+      | Record<string, unknown>
+      | undefined;
+    return {
+      status: (h?.['status'] as string | undefined) ?? 'Unknown',
+      message: h?.['message'] as string | undefined,
+    };
+  }
+
+  /** Returns managed resources whose live state differs from the normalized target state. */
+  async diff(
+    name: string,
+    params: ArgoCdManagedResourcesParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdManagedResource[]> {
+    const resources = await this.managedResources(name, params, signal);
+    return resources.filter(
+      (r) => r.liveState && r.normalizedLiveState && r.liveState !== r.normalizedLiveState,
+    );
+  }
+
+  /** Returns Kubernetes events for an application or one of its resources. */
+  async events(
+    name: string,
+    params: ArgoCdEventsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdEvent[]> {
+    const res = await this.request<{ items?: ArgoCdEvent[] }>(
+      `/api/v1/applications/${encodeURIComponent(name)}/events`,
+      params,
+      signal,
+    );
+    return res.items ?? [];
   }
 }

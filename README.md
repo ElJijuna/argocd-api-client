@@ -70,6 +70,28 @@ const managed = await argocd.applications.managedResources('guestbook');
 const logs = await argocd.applications.logs('guestbook', { container: 'main', tailLines: 100 });
 // logs → ArgoCdLogEntry[]  (streamed NDJSON, returned as an array)
 
+// Convenience methods
+await argocd.applications.images('guestbook');
+// → string[]  unique container images across all resources
+
+await argocd.applications.pods('guestbook');
+// → ArgoCdPod[]  live pods with phase, nodeName and container specs/status
+
+await argocd.applications.containers('guestbook');
+// → ArgoCdContainer[]  all containers flattened from every pod, each with podName
+
+await argocd.applications.nodes('guestbook');
+// → ArgoCdNode[]  Kubernetes nodes hosting the app's pods (osImage, architecture, kernelVersion…)
+
+await argocd.applications.health('guestbook');
+// → ArgoCdApplicationHealth  { status: 'Healthy' | 'Degraded' | …, message? }
+
+await argocd.applications.diff('guestbook');
+// → ArgoCdManagedResource[]  only resources whose live state differs from target
+
+await argocd.applications.events('guestbook');
+// → ArgoCdEvent[]  Kubernetes events for the application or a specific resource
+
 // ApplicationSets
 await argocd.applicationSets.list();
 await argocd.applicationSets.get('my-set');
@@ -397,7 +419,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Methods |
 | --- | --- |
 | `SessionService` | `createSession` |
-| `ApplicationService` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `resourceTree` · `managedResources` · `logs` |
+| `ApplicationService` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `RepositoryService` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
