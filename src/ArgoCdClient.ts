@@ -131,10 +131,10 @@ export class ArgoCdClient {
    */
   static async fromCredentials(options: ArgoCdCredentialsOptions): Promise<ArgoCdClient> {
     const { baseUrl, username, password, signal } = options;
-    const base = new ArgoCdClient({ baseUrl });
-    const { token } = await base.createSession({ username, password }, signal);
-    const client = new ArgoCdClient({ baseUrl, token });
+    const client = new ArgoCdClient({ baseUrl });
+    const { token } = await client.createSession({ username, password }, signal);
 
+    client.token = token;
     client.credentials = { username, password };
 
     return client;
@@ -151,8 +151,8 @@ export class ArgoCdClient {
       );
     }
 
-    const base = new ArgoCdClient({ baseUrl: this.baseUrl });
-    const { token } = await base.createSession(this.credentials, signal);
+    this.token = undefined;
+    const { token } = await this.createSession(this.credentials, signal);
 
     this.token = token;
   }

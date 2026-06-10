@@ -272,6 +272,55 @@ describe('ArgoCdClient', () => {
     await expect(client.refreshSession()).rejects.toThrow('No credentials stored');
   });
 
+  it('fromCredentials session POST sends no Authorization header', async () => {
+    mockJson({ token: 'jwt-token' });
+
+    await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+
+    const headers = mockFetch.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(headers['Authorization']).toBeUndefined();
+  });
+
+  it('refreshSession emits a request event on the client', async () => {
+    mockJson({ token: 'initial-token' });
+    mockJson({ token: 'refreshed-token' });
+
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+
+    const events: string[] = [];
+    client.on('request', (e) => events.push(e.url));
+
+    await client.refreshSession();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain('/api/v1/session');
+  });
+
+  it('refreshSession sends no Authorization header during re-auth', async () => {
+    mockJson({ token: 'initial-token' });
+    mockJson({ token: 'refreshed-token' });
+
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+    });
+
+    await client.refreshSession();
+
+    // call index 1 is the refreshSession POST
+    const headers = mockFetch.mock.calls[1][1]?.headers as Record<string, string>;
+    expect(headers['Authorization']).toBeUndefined();
+  });
+
   describe('resource CRUD methods', () => {
     let client: ArgoCdClient;
 
