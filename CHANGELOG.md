@@ -1,3 +1,11 @@
+# [1.3.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.2.0...v1.3.0) (2026-06-10)
+
+
+### Features
+
+* add new application management methods and health status retrieval in ArgoCdClient ([bbc61b9](https://github.com/ElJijuna/argocd-api-client/commit/bbc61b9f445aa57d7a7e6946ba3cc746d179b812))
+* add user session management methods and user info retrieval in ArgoCdClient ([7d61c53](https://github.com/ElJijuna/argocd-api-client/commit/7d61c5396b73b502d5158bf5afb5e3b39e0ee476))
+
 # [1.2.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.1.0...v1.2.0) (2026-06-09)
 
 
