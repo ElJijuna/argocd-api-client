@@ -1,3 +1,18 @@
+# [1.4.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.3.1...v1.4.0) (2026-06-13)
+
+
+### Bug Fixes
+
+* update deleteResource endpoint and corresponding test to use correct resource path ([44e065b](https://github.com/ElJijuna/argocd-api-client/commit/44e065bd116027d5ecb1e37115ec26929e0364a1))
+
+
+### Features
+
+* add methods for project events and repositories, account token management, and cluster cache invalidation ([98efd1a](https://github.com/ElJijuna/argocd-api-client/commit/98efd1a960fca7357da288b270af949da2a57916))
+* add repository credential, certificate, GPG key, settings, and version management to ArgoCdClient ([d36ccec](https://github.com/ElJijuna/argocd-api-client/commit/d36ccec6de34739a6593021d59f6cafb105725f2))
+* add revisionMetadata and apps methods, along with corresponding types and tests ([469f8de](https://github.com/ElJijuna/argocd-api-client/commit/469f8de0c02d162cb0cafed778a8e29f4d780953))
+* add terminateSync and wait methods, and deleteResource functionality to ApplicationResource ([9220cac](https://github.com/ElJijuna/argocd-api-client/commit/9220cac65c8da82f3b5a539da04101aad0d1749d))
+
 ## [1.3.1](https://github.com/ElJijuna/argocd-api-client/compare/v1.3.0...v1.3.1) (2026-06-10)
 
 
