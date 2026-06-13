@@ -127,6 +127,34 @@ await argocd.accounts.canI('applications', 'get', '*');
 await argocd.accounts.updatePassword({ name: 'admin', currentPassword: 'old', newPassword: 'new' });
 await argocd.accounts.deleteToken('admin', 'token-id');
 
+// Repository credential templates
+await argocd.repoCreds.list();
+await argocd.repoCreds.create({ url: 'https://github.com/acme', username: 'bot', sshPrivateKey: '...' });
+await argocd.repoCreds.deleteByUrl('https://github.com/acme');
+
+// Repository certificates (TLS/SSH)
+await argocd.certificates.list();
+await argocd.certificates.create([{ serverName: 'github.com', certType: 'ssh', certSubType: 'ssh-rsa', certData: '...' }]);
+await argocd.certificates.delete({ hostNamePattern: 'github.com', certType: 'ssh' });
+
+// GPG keys (commit signature verification)
+await argocd.gpgKeys.list();
+// → ArgoCdGpgKeyList  { items: Record<keyID, ArgoCdGpgKey> }
+
+await argocd.gpgKeys.create({ keyData: '-----BEGIN PGP PUBLIC KEY BLOCK-----...' });
+// → ArgoCdGpgKeyCreateResponse  { created: Record<keyID, ArgoCdGpgKey>, skipped: string[] }
+
+await argocd.gpgKeys.create({ keyData: '...' }, { upsert: true });
+await argocd.gpgKeys.deleteByKeyId('A1B2C3D4');
+
+// Server settings (read-only)
+await argocd.settings.get();
+// → ArgoCdSettings  { url, appLabelKey, statusBadgeEnabled, ... }
+
+// Server version
+await argocd.version.get();
+// → ArgoCdVersion  { Version, BuildDate, GitCommit, GitTag, GoVersion, Platform, ... }
+
 // Session
 await argocd.userInfo();
 // → ArgoCdUserInfo  { loggedIn, username, iss, groups }
@@ -423,14 +451,19 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 
 ## API Coverage
 
-| Service | Methods |
-| --- | --- |
-| `SessionService` | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
-| `ApplicationSetService` | `list` · `get` · `create` · `update` · `deleteByName` |
-| `ProjectService` | `list` · `get` · `create` · `update` · `deleteByName` |
-| `RepositoryService` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
-| `ClusterService` | `list` · `get` · `create` · `update` · `deleteByServer` |
-| `AccountService` | `list` · `get` · `canI` · `updatePassword` · `deleteToken` |
+| Service | Client property | Methods |
+| --- | --- | --- |
+| `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
+| `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` |
+| `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
+| `RepoCredsService` | `repoCreds` | `list` · `create` · `deleteByUrl` |
+| `ClusterService` | `clusters` | `list` · `get` · `create` · `update` · `deleteByServer` |
+| `AccountService` | `accounts` | `list` · `get` · `canI` · `updatePassword` · `deleteToken` |
+| `CertificateService` | `certificates` | `list` · `create` · `delete` |
+| `GPGKeyService` | `gpgKeys` | `list` · `create` · `deleteByKeyId` |
+| `SettingsService` | `settings` | `get` |
+| `VersionService` | `version` | `get` |
 
 See [ROADMAP.md](ROADMAP.md) for planned additions. Types keep Argo CD/Kubernetes payloads extensible with `Record<string, unknown>` for areas where server versions vary.

@@ -321,6 +321,175 @@ describe('ArgoCdClient', () => {
     expect(headers['Authorization']).toBeUndefined();
   });
 
+  describe('VersionResource', () => {
+    it('returns server version info', async () => {
+      mockJson({
+        Version: 'v2.9.3',
+        BuildDate: '2024-01-15T12:00:00Z',
+        GitCommit: 'f8dc03b',
+        GitTag: 'v2.9.3',
+        GoVersion: 'go1.21.4',
+        Platform: 'linux/amd64',
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const version = await client.version.get();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/version');
+      expect(version.Version).toBe('v2.9.3');
+      expect(version.GitTag).toBe('v2.9.3');
+      expect(version.Platform).toBe('linux/amd64');
+    });
+  });
+
+  describe('SettingsResource', () => {
+    it('returns server settings', async () => {
+      mockJson({
+        url: 'https://argocd.example.com',
+        appLabelKey: 'app.kubernetes.io/name',
+        statusBadgeEnabled: true,
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const settings = await client.settings.get();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/settings');
+      expect(settings.url).toBe('https://argocd.example.com');
+      expect(settings.appLabelKey).toBe('app.kubernetes.io/name');
+      expect(settings.statusBadgeEnabled).toBe(true);
+    });
+  });
+
+  describe('RepoCredsResource', () => {
+    it('lists repository credential templates', async () => {
+      mockJson({ items: [{ url: 'https://github.com/acme', username: 'bot' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const creds = await client.repoCreds.list();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/repocreds');
+      expect(creds.items[0].url).toBe('https://github.com/acme');
+    });
+
+    it('creates a repository credential template', async () => {
+      mockJson({ url: 'https://github.com/acme', username: 'bot' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const cred = await client.repoCreds.create({
+        url: 'https://github.com/acme',
+        username: 'bot',
+      });
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/repocreds');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+      expect(cred.url).toBe('https://github.com/acme');
+    });
+
+    it('deletes a repository credential template by URL', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.repoCreds.deleteByUrl('https://github.com/acme');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repocreds/');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+  });
+
+  describe('CertificateResource', () => {
+    it('lists repository certificates', async () => {
+      mockJson({ items: [{ serverName: 'github.com', certType: 'ssh', certSubType: 'ssh-rsa' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const certs = await client.certificates.list();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/certificates');
+      expect(certs.items?.[0].serverName).toBe('github.com');
+      expect(certs.items?.[0].certType).toBe('ssh');
+    });
+
+    it('creates repository certificates', async () => {
+      mockJson({ items: [{ serverName: 'gitlab.com', certType: 'https' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const result = await client.certificates.create([
+        { serverName: 'gitlab.com', certType: 'https', certData: 'cert-pem-data' },
+      ]);
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/certificates');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+      expect(result.items?.[0].serverName).toBe('gitlab.com');
+    });
+
+    it('deletes certificates with query param filters', async () => {
+      mockJson({ items: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.certificates.delete({ hostNamePattern: 'github.com', certType: 'ssh' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/api/v1/certificates');
+      expect(url).toContain('hostNamePattern=github.com');
+      expect(url).toContain('certType=ssh');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('deletes certificates with no filters when params omitted', async () => {
+      mockJson({ items: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.certificates.delete();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/certificates');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+  });
+
+  describe('GpgKeyResource', () => {
+    it('lists GPG keys', async () => {
+      mockJson({ items: { A1B2C3D4: { keyID: 'A1B2C3D4', owner: 'alice', trust: 'ultimate' } } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const keys = await client.gpgKeys.list();
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/gpgkeys');
+      expect(keys.items?.['A1B2C3D4']?.owner).toBe('alice');
+    });
+
+    it('imports a GPG key', async () => {
+      mockJson({ created: { A1B2C3D4: { keyID: 'A1B2C3D4', owner: 'alice' } }, skipped: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const result = await client.gpgKeys.create({
+        keyData: '-----BEGIN PGP PUBLIC KEY BLOCK-----...',
+      });
+
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/gpgkeys');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+      expect(result.created?.['A1B2C3D4']?.owner).toBe('alice');
+      expect(result.skipped).toEqual([]);
+    });
+
+    it('imports a GPG key with upsert flag', async () => {
+      mockJson({ created: { A1B2C3D4: { keyID: 'A1B2C3D4' } }, skipped: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.gpgKeys.create({ keyData: '...' }, { upsert: true });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('upsert=true');
+    });
+
+    it('deletes a GPG key by key ID', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.gpgKeys.deleteByKeyId('A1B2C3D4');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/gpgkeys/A1B2C3D4');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+  });
+
   describe('resource CRUD methods', () => {
     let client: ArgoCdClient;
 

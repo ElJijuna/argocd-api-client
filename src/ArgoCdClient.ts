@@ -3,9 +3,14 @@ import { ArgoCdApiError } from './errors/ArgoCdApiError';
 import { AccountResource } from './resources/AccountResource';
 import { ApplicationResource } from './resources/ApplicationResource';
 import { ApplicationSetResource } from './resources/ApplicationSetResource';
+import { CertificateResource } from './resources/CertificateResource';
 import { ClusterResource } from './resources/ClusterResource';
+import { GpgKeyResource } from './resources/GpgKeyResource';
 import { ProjectResource } from './resources/ProjectResource';
+import { RepoCredsResource } from './resources/RepoCredsResource';
 import { RepositoryResource } from './resources/RepositoryResource';
+import { SettingsResource } from './resources/SettingsResource';
+import { VersionResource } from './resources/VersionResource';
 import type { QueryParams, QueryValue } from './resources/types';
 
 export interface RequestEvent {
@@ -67,10 +72,20 @@ export class ArgoCdClient {
   readonly projects: ProjectResource;
   /** Repository API resource. */
   readonly repositories: RepositoryResource;
+  /** Repository credential templates API resource. */
+  readonly repoCreds: RepoCredsResource;
   /** Cluster API resource. */
   readonly clusters: ClusterResource;
   /** Account API resource. */
   readonly accounts: AccountResource;
+  /** Repository TLS/SSH certificate API resource. */
+  readonly certificates: CertificateResource;
+  /** GPG public key API resource. */
+  readonly gpgKeys: GpgKeyResource;
+  /** Server settings API resource. */
+  readonly settings: SettingsResource;
+  /** Server version API resource. */
+  readonly version: VersionResource;
   private readonly baseUrl: string;
   private token?: string;
   private credentials?: StoredCredentials;
@@ -101,8 +116,13 @@ export class ArgoCdClient {
     this.applicationSets = new ApplicationSetResource(request, post, put, del);
     this.projects = new ProjectResource(request, post, put, del);
     this.repositories = new RepositoryResource(request, post, del);
+    this.repoCreds = new RepoCredsResource(request, post, del);
     this.clusters = new ClusterResource(request, post, del, put);
     this.accounts = new AccountResource(request, put, del);
+    this.certificates = new CertificateResource(request, post, del);
+    this.gpgKeys = new GpgKeyResource(request, post, del);
+    this.settings = new SettingsResource(request);
+    this.version = new VersionResource(request);
   }
 
   on<K extends keyof ArgoCdClientEvents>(event: K, callback: ArgoCdClientEvents[K]): this {

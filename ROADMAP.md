@@ -94,33 +94,33 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 ### RepoCredsService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/repocreds` | 🔜 |
-| `POST` | `/repocreds` | 🔜 |
-| `DELETE` | `/repocreds/{url}` | 🔜 |
+| `GET` | `/repocreds` | ✅ `repoCreds.list()` |
+| `POST` | `/repocreds` | ✅ `repoCreds.create()` |
+| `DELETE` | `/repocreds/{url}` | ✅ `repoCreds.deleteByUrl()` |
 
 ### CertificateService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/certificates` | 🔜 |
-| `POST` | `/certificates` | 🔜 |
-| `DELETE` | `/certificates/{dn}` | 🔜 |
+| `GET` | `/certificates` | ✅ `certificates.list()` |
+| `POST` | `/certificates` | ✅ `certificates.create()` |
+| `DELETE` | `/certificates` | ✅ `certificates.delete()` |
 
 ### GPGKeyService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/gpgkeys` | 🔜 |
-| `POST` | `/gpgkeys` | 🔜 |
-| `DELETE` | `/gpgkeys/{keyid}` | 🔜 |
+| `GET` | `/gpgkeys` | ✅ `gpgKeys.list()` |
+| `POST` | `/gpgkeys` | ✅ `gpgKeys.create()` |
+| `DELETE` | `/gpgkeys/{keyid}` | ✅ `gpgKeys.deleteByKeyId()` |
 
 ### SettingsService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/settings` | 🔜 |
+| `GET` | `/settings` | ✅ `settings.get()` |
 
 ### VersionService
 | Method | Endpoint | Status |
 | --- | --- | --- |
-| `GET` | `/version` | 🔜 |
+| `GET` | `/version` | ✅ `version.get()` |
 
 ---
 
