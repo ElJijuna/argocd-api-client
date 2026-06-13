@@ -1,3 +1,5 @@
+import type { QueryParams } from '../resources/types';
+
 /** Argo CD repository credentials/config. */
 export interface ArgoCdRepository {
   /** Repository URL. */
@@ -44,4 +46,30 @@ export interface ArgoCdRepositoryRefs {
   branches?: string[];
   /** Tag refs. */
   tags?: string[];
+}
+
+/** A detected application entry inside a repository. */
+export interface ArgoCdRepoApp {
+  /** Application manifest type (e.g. `Helm`, `Kustomize`, `Directory`). */
+  type?: string;
+  /** Path within the repository where the app manifest lives. */
+  path?: string;
+}
+
+/** Response for the repository apps endpoint. */
+export interface ArgoCdRepoAppsResponse {
+  /** Detected application entries. */
+  items?: ArgoCdRepoApp[];
+}
+
+/** Query parameters for repositories.apps(). */
+export interface ArgoCdRepoAppsParams extends QueryParams {
+  /** Git revision (branch, tag, or commit SHA) to inspect. */
+  revision?: string;
+  /** Subdirectory path to search within. */
+  path?: string;
+  /** Application name hint passed to the server for context. */
+  appName?: string;
+  /** Project name hint passed to the server for context. */
+  appProject?: string;
 }

@@ -27,7 +27,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/refresh` | ✅ `refresh()` |
 | `GET` | `/applications/{name}/events` | ✅ `events()` |
 | `POST` | `/applications/{name}/wait` | ✅ `wait()` |
-| `POST` | `/applications/{name}/revisions/{revision}/metadata` | 🔜 |
+| `GET` | `/applications/{name}/revisions/{revision}/metadata` | ✅ `revisionMetadata()` |
 
 ### ProjectService
 | Method | Endpoint | Status |
@@ -47,7 +47,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `POST` | `/repositories` | ✅ |
 | `GET` | `/repositories/{repo}` | ✅ |
 | `DELETE` | `/repositories/{repo}` | ✅ |
-| `GET` | `/repositories/{repo}/apps` | 🔜 |
+| `GET` | `/repositories/{repo}/apps` | ✅ `repositories.apps()` |
 | `GET` | `/repositories/{repo}/refs` | ✅ |
 
 ### ClusterService

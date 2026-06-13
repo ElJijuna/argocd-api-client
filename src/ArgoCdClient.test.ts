@@ -809,6 +809,73 @@ describe('ArgoCdClient', () => {
       expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
     });
 
+    it('returns revision metadata for an application', async () => {
+      mockJson({
+        author: 'alice',
+        date: '2024-01-15T12:00:00Z',
+        message: 'fix: bump image',
+        tags: ['v2.1.0'],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const meta = await client.applications.revisionMetadata('guestbook', 'v2.1.0');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/applications/guestbook/revisions/v2.1.0/metadata',
+      );
+      expect(meta.author).toBe('alice');
+      expect(meta.message).toBe('fix: bump image');
+      expect(meta.tags).toEqual(['v2.1.0']);
+    });
+
+    it('returns revision metadata with appNamespace param', async () => {
+      mockJson({
+        author: 'bob',
+        date: '2024-01-10T08:00:00Z',
+        message: 'chore: update deps',
+        tags: [],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.revisionMetadata('guestbook', 'HEAD', { appNamespace: 'argocd' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/api/v1/applications/guestbook/revisions/HEAD/metadata');
+      expect(url).toContain('appNamespace=argocd');
+    });
+
+    it('returns apps detected in a repository', async () => {
+      mockJson({
+        items: [
+          { type: 'Kustomize', path: 'helm/' },
+          { type: 'Directory', path: 'manifests/' },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const result = await client.repositories.apps('https://github.com/acme/app.git');
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repositories/');
+      expect(mockFetch.mock.calls[0][0]).toContain('/apps');
+      expect(result.items).toHaveLength(2);
+      expect(result.items?.[0].type).toBe('Kustomize');
+      expect(result.items?.[0].path).toBe('helm/');
+    });
+
+    it('returns repository apps with query params', async () => {
+      mockJson({ items: [{ type: 'Helm', path: 'charts/app' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.repositories.apps('https://github.com/acme/app.git', {
+        revision: 'main',
+        path: 'charts/',
+      });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('revision=main');
+      expect(url).toContain('path=charts%2F');
+    });
+
     it('terminates a running sync operation', async () => {
       mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });

@@ -18,6 +18,8 @@ import type {
   ArgoCdPod,
   ArgoCdPodsParams,
   ArgoCdResourceTree,
+  ArgoCdRevisionMetadata,
+  ArgoCdRevisionMetadataParams,
 } from '../domain/application';
 import type { BodyRequestFn, EmptyBodyRequestFn, NdJsonRequestFn, RequestFn } from './types';
 
@@ -560,6 +562,28 @@ export class ApplicationResource {
       signal,
     );
     return res.items ?? [];
+  }
+
+  /**
+   * Returns Git commit metadata for a specific revision of an application's source.
+   *
+   * @param name - Application name.
+   * @param revision - Git ref (branch, tag, or commit SHA).
+   * @param params - Optional `appNamespace` and `project` for authorization.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns `{ author, date, tags, message }`.
+   */
+  async revisionMetadata(
+    name: string,
+    revision: string,
+    params: ArgoCdRevisionMetadataParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdRevisionMetadata> {
+    return this.request<ArgoCdRevisionMetadata>(
+      `/api/v1/applications/${encodeURIComponent(name)}/revisions/${encodeURIComponent(revision)}/metadata`,
+      params,
+      signal,
+    );
   }
 
   /** Terminates a running sync operation for an application. */

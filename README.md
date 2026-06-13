@@ -61,6 +61,9 @@ await argocd.applications.create({ metadata: { name: 'guestbook' } });
 await argocd.applications.update('guestbook', { metadata: { name: 'guestbook' } });
 await argocd.applications.patch('guestbook', { spec: {} });
 await argocd.applications.sync('guestbook', { revision: 'main' });
+await argocd.applications.revisionMetadata('guestbook', 'v2.1.0');
+// → ArgoCdRevisionMetadata  { author, date, tags, message }
+
 await argocd.applications.terminateSync('guestbook');
 await argocd.applications.wait('guestbook', { health: true, timeout: '60s' });
 // → ArgoCdApplication  returned once the app reaches the desired state
@@ -127,6 +130,9 @@ await argocd.repositories.list();
 await argocd.repositories.get('https://github.com/acme/app.git');
 await argocd.repositories.create({ repo: 'https://github.com/acme/app.git' });
 await argocd.repositories.refs('https://github.com/acme/app.git');
+await argocd.repositories.apps('https://github.com/acme/app.git', { revision: 'main' });
+// → ArgoCdRepoAppsResponse  { items: [{ type, path }] }
+
 await argocd.repositories.deleteByRepo('https://github.com/acme/app.git');
 
 // Clusters
@@ -478,10 +484,10 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `revisionMetadata` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
-| `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
+| `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `apps` · `deleteByRepo` |
 | `RepoCredsService` | `repoCreds` | `list` · `create` · `deleteByUrl` |
 | `ClusterService` | `clusters` | `list` · `get` · `create` · `update` · `deleteByServer` · `invalidateCache` |
 | `AccountService` | `accounts` | `list` · `get` · `canI` · `updatePassword` · `listTokens` · `createToken` · `deleteToken` |

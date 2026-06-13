@@ -39,6 +39,8 @@ export type {
   ArgoCdPodsParams,
   ArgoCdResourceNode,
   ArgoCdResourceTree,
+  ArgoCdRevisionMetadata,
+  ArgoCdRevisionMetadataParams,
 } from './domain/application';
 export type {
   ArgoCdApplicationSet,
@@ -69,6 +71,9 @@ export type {
 export type { ArgoCdProject, ArgoCdProjectList, ArgoCdProjectListParams } from './domain/project';
 export type { ArgoCdRepoCred, ArgoCdRepoCredList } from './domain/repocreds';
 export type {
+  ArgoCdRepoApp,
+  ArgoCdRepoAppsParams,
+  ArgoCdRepoAppsResponse,
   ArgoCdRepository,
   ArgoCdRepositoryList,
   ArgoCdRepositoryRef,

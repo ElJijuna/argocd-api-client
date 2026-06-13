@@ -1,4 +1,6 @@
 import type {
+  ArgoCdRepoAppsParams,
+  ArgoCdRepoAppsResponse,
   ArgoCdRepository,
   ArgoCdRepositoryList,
   ArgoCdRepositoryRefs,
@@ -46,6 +48,19 @@ export class RepositoryResource {
     return this.request<ArgoCdRepositoryRefs>(
       `/api/v1/repositories/${encodeURIComponent(repo)}/refs`,
       undefined,
+      signal,
+    );
+  }
+
+  /** Returns the list of apps detected inside a repository at a given path/revision. */
+  async apps(
+    repo: string,
+    params: ArgoCdRepoAppsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdRepoAppsResponse> {
+    return this.request<ArgoCdRepoAppsResponse>(
+      `/api/v1/repositories/${encodeURIComponent(repo)}/apps`,
+      params,
       signal,
     );
   }

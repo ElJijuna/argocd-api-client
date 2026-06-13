@@ -273,6 +273,26 @@ export interface ArgoCdEventsParams extends QueryParams {
   resourceUID?: string;
 }
 
+/** Git revision metadata returned by the revision-metadata endpoint. */
+export interface ArgoCdRevisionMetadata {
+  /** Commit author name / email. */
+  author?: string;
+  /** ISO 8601 commit date. */
+  date?: string;
+  /** Git tags pointing at this revision. */
+  tags?: string[];
+  /** Commit message. */
+  message?: string;
+}
+
+/** Query parameters for revisionMetadata(). */
+export interface ArgoCdRevisionMetadataParams extends QueryParams {
+  /** Application namespace for multi-namespace installs. */
+  appNamespace?: string;
+  /** Project name used for authorization checks. */
+  project?: string;
+}
+
 /** Request body for wait() — waits until the application reaches a desired state. */
 export interface ArgoCdApplicationWaitRequest {
   /** Specific resources to wait for (filters the wait scope). */
