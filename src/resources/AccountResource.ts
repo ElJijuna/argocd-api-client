@@ -1,4 +1,11 @@
-import type { ArgoCdAccount, ArgoCdAccountList, ArgoCdCanIResponse } from '../domain/account';
+import type {
+  ArgoCdAccount,
+  ArgoCdAccountCreateTokenRequest,
+  ArgoCdAccountList,
+  ArgoCdAccountTokenCreated,
+  ArgoCdAccountTokenList,
+  ArgoCdCanIResponse,
+} from '../domain/account';
 import type { BodyRequestFn, EmptyBodyRequestFn, RequestFn } from './types';
 
 /** Methods for Argo CD local accounts and account capabilities. */
@@ -6,6 +13,7 @@ export class AccountResource {
   /** @internal */
   constructor(
     private readonly request: RequestFn,
+    private readonly post: BodyRequestFn,
     private readonly put: BodyRequestFn,
     private readonly deleteRequest: EmptyBodyRequestFn,
   ) {}
@@ -54,6 +62,28 @@ export class AccountResource {
   ): Promise<Record<string, never>> {
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/account/${encodeURIComponent(name)}/token/${encodeURIComponent(id)}`,
+      signal,
+    );
+  }
+
+  /** Lists all tokens for an account. */
+  async listTokens(name: string, signal?: AbortSignal): Promise<ArgoCdAccountTokenList> {
+    return this.request<ArgoCdAccountTokenList>(
+      `/api/v1/account/${encodeURIComponent(name)}/tokens`,
+      undefined,
+      signal,
+    );
+  }
+
+  /** Creates a new token for an account. */
+  async createToken(
+    name: string,
+    body: ArgoCdAccountCreateTokenRequest = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdAccountTokenCreated> {
+    return this.post<ArgoCdAccountTokenCreated>(
+      `/api/v1/account/${encodeURIComponent(name)}/token`,
+      body,
       signal,
     );
   }

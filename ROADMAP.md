@@ -37,8 +37,8 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/projects/{name}` | ✅ |
 | `PUT` | `/projects/{name}` | ✅ |
 | `DELETE` | `/projects/{name}` | ✅ |
-| `GET` | `/projects/{name}/events` | 🔜 |
-| `GET` | `/projects/{name}/repositories` | 🔜 |
+| `GET` | `/projects/{name}/events` | ✅ `projects.events()` |
+| `GET` | `/projects/{name}/repositories` | ✅ `projects.repositories()` |
 
 ### RepositoryService
 | Method | Endpoint | Status |
@@ -58,7 +58,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/clusters/{server}` | ✅ |
 | `PUT` | `/clusters/{server}` | ✅ |
 | `DELETE` | `/clusters/{server}` | ✅ |
-| `GET` | `/clusters/{server}/invalidate-cache` | 🔜 |
+| `GET` | `/clusters/{server}/invalidate-cache` | ✅ `clusters.invalidateCache()` |
 
 ### AccountService
 | Method | Endpoint | Status |
@@ -67,8 +67,8 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/account/{name}` | ✅ |
 | `PUT` | `/account/password` | ✅ |
 | `GET` | `/account/can-i/{resource}/{action}/{subresource}` | ✅ |
-| `GET` | `/account/{name}/tokens` | 🔜 |
-| `POST` | `/account/{name}/token` | 🔜 |
+| `GET` | `/account/{name}/tokens` | ✅ `accounts.listTokens()` |
+| `POST` | `/account/{name}/token` | ✅ `accounts.createToken()` |
 | `DELETE` | `/account/{name}/token/{id}` | ✅ |
 
 ### SessionService

@@ -118,7 +118,7 @@ export class ArgoCdClient {
     this.repositories = new RepositoryResource(request, post, del);
     this.repoCreds = new RepoCredsResource(request, post, del);
     this.clusters = new ClusterResource(request, post, del, put);
-    this.accounts = new AccountResource(request, put, del);
+    this.accounts = new AccountResource(request, post, put, del);
     this.certificates = new CertificateResource(request, post, del);
     this.gpgKeys = new GpgKeyResource(request, post, del);
     this.settings = new SettingsResource(request);

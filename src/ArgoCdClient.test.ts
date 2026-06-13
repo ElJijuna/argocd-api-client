@@ -524,6 +524,94 @@ describe('ArgoCdClient', () => {
       expect(url).toContain('refresh=normal');
     });
 
+    it('returns events for a project', async () => {
+      mockJson({
+        items: [{ reason: 'Synced', message: 'Synced successfully', type: 'Normal', count: 1 }],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const events = await client.projects.events('default');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/projects/default/events',
+      );
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('Synced');
+      expect(events[0].type).toBe('Normal');
+    });
+
+    it('returns empty events array when items absent for project', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const events = await client.projects.events('default');
+
+      expect(events).toEqual([]);
+    });
+
+    it('returns repositories for a project', async () => {
+      mockJson({ items: [{ repo: 'https://github.com/acme/app.git', type: 'git' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const repos = await client.projects.repositories('default');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/projects/default/repositories',
+      );
+      expect(repos.items[0].repo).toBe('https://github.com/acme/app.git');
+    });
+
+    it('lists tokens for an account', async () => {
+      mockJson({ items: [{ id: 'tok-1', issuedAt: 1700000000, expiresAt: 1800000000 }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const tokens = await client.accounts.listTokens('admin');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/account/admin/tokens',
+      );
+      expect(tokens.items[0].id).toBe('tok-1');
+      expect(tokens.items[0].issuedAt).toBe(1700000000);
+    });
+
+    it('creates an account token', async () => {
+      mockJson({ token: 'eyJhb...', id: 'tok-new', issuedAt: 1700000000 });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const result = await client.accounts.createToken('admin', {
+        expiresIn: '24h',
+        id: 'tok-new',
+      });
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/account/admin/token',
+      );
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+      expect(result.token).toBe('eyJhb...');
+      expect(result.id).toBe('tok-new');
+    });
+
+    it('creates an account token with defaults when no body given', async () => {
+      mockJson({ token: 'eyJhb...', id: 'tok-new' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.accounts.createToken('admin');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('invalidates cluster cache', async () => {
+      mockJson({ name: 'in-cluster', server: 'https://kubernetes.default.svc' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const cluster = await client.clusters.invalidateCache('https://kubernetes.default.svc');
+
+      expect(mockFetch.mock.calls[0][0]).toContain(
+        '/api/v1/clusters/https%3A%2F%2Fkubernetes.default.svc/invalidate-cache',
+      );
+      expect(cluster.name).toBe('in-cluster');
+    });
+
     it('gets a project', async () => {
       mockJson({ metadata: { name: 'default' } });
 

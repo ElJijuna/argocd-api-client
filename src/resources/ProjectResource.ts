@@ -1,4 +1,6 @@
+import type { ArgoCdEvent } from '../domain/application';
 import type { ArgoCdProject, ArgoCdProjectList, ArgoCdProjectListParams } from '../domain/project';
+import type { ArgoCdRepositoryList } from '../domain/repository';
 import type { BodyRequestFn, EmptyBodyRequestFn, RequestFn } from './types';
 
 /** Methods for Argo CD projects. */
@@ -46,6 +48,25 @@ export class ProjectResource {
   async deleteByName(name: string, signal?: AbortSignal): Promise<Record<string, never>> {
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/projects/${encodeURIComponent(name)}`,
+      signal,
+    );
+  }
+
+  /** Returns Kubernetes events for a project. */
+  async events(name: string, signal?: AbortSignal): Promise<ArgoCdEvent[]> {
+    const res = await this.request<{ items?: ArgoCdEvent[] }>(
+      `/api/v1/projects/${encodeURIComponent(name)}/events`,
+      undefined,
+      signal,
+    );
+    return res.items ?? [];
+  }
+
+  /** Returns repositories associated with a project. */
+  async repositories(name: string, signal?: AbortSignal): Promise<ArgoCdRepositoryList> {
+    return this.request<ArgoCdRepositoryList>(
+      `/api/v1/projects/${encodeURIComponent(name)}/repositories`,
+      undefined,
       signal,
     );
   }

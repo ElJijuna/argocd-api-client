@@ -46,8 +46,11 @@ export type {
 export type { KubernetesMetadata, EmptyResponse } from './domain/common';
 export type {
   ArgoCdAccount,
+  ArgoCdAccountCreateTokenRequest,
   ArgoCdAccountList,
   ArgoCdAccountToken,
+  ArgoCdAccountTokenCreated,
+  ArgoCdAccountTokenList,
   ArgoCdCanIResponse,
 } from './domain/account';
 export type {

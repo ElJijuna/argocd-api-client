@@ -105,6 +105,11 @@ await argocd.projects.get('default');
 await argocd.projects.create({ metadata: { name: 'default' } });
 await argocd.projects.update('default', { metadata: { name: 'default' } });
 await argocd.projects.deleteByName('default');
+await argocd.projects.events('default');
+// → ArgoCdEvent[]  Kubernetes events for the project
+
+await argocd.projects.repositories('default');
+// → ArgoCdRepositoryList  repositories associated with the project
 
 // Repositories
 await argocd.repositories.list();
@@ -119,12 +124,20 @@ await argocd.clusters.get('https://kubernetes.default.svc');
 await argocd.clusters.create({ name: 'prod', server: 'https://prod.k8s.io' });
 await argocd.clusters.update('https://prod.k8s.io', { name: 'prod' });
 await argocd.clusters.deleteByServer('https://kubernetes.default.svc');
+await argocd.clusters.invalidateCache('https://kubernetes.default.svc');
+// → ArgoCdCluster  cluster with refreshed cache state
 
 // Accounts
 await argocd.accounts.list();
 await argocd.accounts.get('admin');
 await argocd.accounts.canI('applications', 'get', '*');
 await argocd.accounts.updatePassword({ name: 'admin', currentPassword: 'old', newPassword: 'new' });
+await argocd.accounts.listTokens('admin');
+// → ArgoCdAccountTokenList  { items: ArgoCdAccountToken[] }
+
+await argocd.accounts.createToken('admin', { expiresIn: '24h', id: 'ci-token' });
+// → ArgoCdAccountTokenCreated  { token, id, issuedAt, expiresAt }
+
 await argocd.accounts.deleteToken('admin', 'token-id');
 
 // Repository credential templates
@@ -456,11 +469,11 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
 | `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
-| `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` |
+| `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
 | `RepoCredsService` | `repoCreds` | `list` · `create` · `deleteByUrl` |
-| `ClusterService` | `clusters` | `list` · `get` · `create` · `update` · `deleteByServer` |
-| `AccountService` | `accounts` | `list` · `get` · `canI` · `updatePassword` · `deleteToken` |
+| `ClusterService` | `clusters` | `list` · `get` · `create` · `update` · `deleteByServer` · `invalidateCache` |
+| `AccountService` | `accounts` | `list` · `get` · `canI` · `updatePassword` · `listTokens` · `createToken` · `deleteToken` |
 | `CertificateService` | `certificates` | `list` · `create` · `delete` |
 | `GPGKeyService` | `gpgKeys` | `list` · `create` · `deleteByKeyId` |
 | `SettingsService` | `settings` | `get` |
