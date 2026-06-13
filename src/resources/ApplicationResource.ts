@@ -635,7 +635,7 @@ export class ApplicationResource {
     }
     const qs = query.toString();
     return this.deleteRequest<Record<string, never>>(
-      `/api/v1/applications/${encodeURIComponent(name)}/managed-resources${qs ? `?${qs}` : ''}`,
+      `/api/v1/applications/${encodeURIComponent(name)}/resource${qs ? `?${qs}` : ''}`,
       signal,
     );
   }

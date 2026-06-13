@@ -22,7 +22,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/logs` | ✅ |
 | `GET` | `/applications/{name}/resource-tree` | ✅ |
 | `GET` | `/applications/{name}/managed-resources` | ✅ |
-| `DELETE` | `/applications/{name}/managed-resources` | ✅ `deleteResource()` |
+| `DELETE` | `/applications/{name}/resource` | ✅ `deleteResource()` |
 | `POST` | `/applications/{name}/rollback` | ✅ |
 | `GET` | `/applications/{name}/refresh` | ✅ `refresh()` |
 | `GET` | `/applications/{name}/events` | ✅ `events()` |

@@ -926,7 +926,7 @@ describe('ArgoCdClient', () => {
       });
 
       const url = mockFetch.mock.calls[0][0] as string;
-      expect(url).toContain('/api/v1/applications/guestbook/managed-resources');
+      expect(url).toContain('/api/v1/applications/guestbook/resource');
       expect(url).toContain('kind=Deployment');
       expect(url).toContain('resourceName=api');
       expect(url).toContain('version=v1');
