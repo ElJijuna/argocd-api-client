@@ -809,6 +809,82 @@ describe('ArgoCdClient', () => {
       expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'PUT' });
     });
 
+    it('terminates a running sync operation', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.terminateSync('guestbook');
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/applications/guestbook/sync',
+      );
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('waits for application to reach desired state', async () => {
+      mockJson({ metadata: { name: 'guestbook' }, status: { health: { status: 'Healthy' } } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const app = await client.applications.wait('guestbook', { health: true, timeout: '60s' });
+
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/applications/guestbook/wait',
+      );
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({
+        method: 'POST',
+        body: JSON.stringify({ health: true, timeout: '60s' }),
+      });
+      expect(app.metadata?.name).toBe('guestbook');
+    });
+
+    it('waits with no body when options omitted', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.wait('guestbook');
+
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+    });
+
+    it('deletes a managed resource by kind and name', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.deleteResource('guestbook', {
+        kind: 'Deployment',
+        resourceName: 'api',
+        version: 'v1',
+        namespace: 'default',
+        group: 'apps',
+      });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/api/v1/applications/guestbook/managed-resources');
+      expect(url).toContain('kind=Deployment');
+      expect(url).toContain('resourceName=api');
+      expect(url).toContain('version=v1');
+      expect(url).toContain('namespace=default');
+      expect(url).toContain('group=apps');
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('deletes a managed resource with force and orphan flags', async () => {
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.deleteResource('guestbook', {
+        kind: 'Pod',
+        resourceName: 'api-abc123',
+        version: 'v1',
+        force: true,
+        orphan: false,
+      });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('force=true');
+      expect(url).toContain('orphan=false');
+    });
+
     it('rolls back an application', async () => {
       mockJson({ metadata: { name: 'guestbook' } });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });

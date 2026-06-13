@@ -5,7 +5,9 @@ import type {
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
   ArgoCdApplicationLogsParams,
+  ArgoCdApplicationWaitRequest,
   ArgoCdContainer,
+  ArgoCdDeleteResourceParams,
   ArgoCdEvent,
   ArgoCdEventsParams,
   ArgoCdLogEntry,
@@ -558,5 +560,59 @@ export class ApplicationResource {
       signal,
     );
     return res.items ?? [];
+  }
+
+  /** Terminates a running sync operation for an application. */
+  async terminateSync(name: string, signal?: AbortSignal): Promise<Record<string, never>> {
+    return this.deleteRequest<Record<string, never>>(
+      `/api/v1/applications/${encodeURIComponent(name)}/sync`,
+      signal,
+    );
+  }
+
+  /**
+   * Waits until the application reaches the requested state (health, sync, or operation complete).
+   *
+   * @param name - Application name.
+   * @param body - Wait conditions: `health`, `operation`, `suspended`, `timeout`, `resources`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   * @returns The application once it reaches the desired state (or the server times out).
+   */
+  async wait(
+    name: string,
+    body: ArgoCdApplicationWaitRequest = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplication> {
+    return this.post<ArgoCdApplication>(
+      `/api/v1/applications/${encodeURIComponent(name)}/wait`,
+      body,
+      signal,
+    );
+  }
+
+  /**
+   * Deletes a specific managed Kubernetes resource from an application.
+   * Use this to remove individual resources (e.g. a stuck Pod or a Deployment) without syncing.
+   *
+   * @param name - Application name.
+   * @param params - Resource selector: `kind`, `resourceName`, `version` are required by the API.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   */
+  async deleteResource(
+    name: string,
+    params: ArgoCdDeleteResourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<Record<string, never>> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        query.set(key, String(value));
+      }
+    }
+    const qs = query.toString();
+    return this.deleteRequest<Record<string, never>>(
+      `/api/v1/applications/${encodeURIComponent(name)}/managed-resources${qs ? `?${qs}` : ''}`,
+      signal,
+    );
   }
 }

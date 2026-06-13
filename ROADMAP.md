@@ -18,15 +18,15 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `DELETE` | `/applications/{name}` | ✅ |
 | `PATCH` | `/applications/{name}` | ✅ |
 | `POST` | `/applications/{name}/sync` | ✅ |
-| `DELETE` | `/applications/{name}/sync` | 🔜 |
+| `DELETE` | `/applications/{name}/sync` | ✅ `terminateSync()` |
 | `GET` | `/applications/{name}/logs` | ✅ |
 | `GET` | `/applications/{name}/resource-tree` | ✅ |
 | `GET` | `/applications/{name}/managed-resources` | ✅ |
-| `DELETE` | `/applications/{name}/managed-resources` | 🔜 |
+| `DELETE` | `/applications/{name}/managed-resources` | ✅ `deleteResource()` |
 | `POST` | `/applications/{name}/rollback` | ✅ |
 | `GET` | `/applications/{name}/refresh` | ✅ `refresh()` |
 | `GET` | `/applications/{name}/events` | ✅ `events()` |
-| `POST` | `/applications/{name}/wait` | 🔜 |
+| `POST` | `/applications/{name}/wait` | ✅ `wait()` |
 | `POST` | `/applications/{name}/revisions/{revision}/metadata` | 🔜 |
 
 ### ProjectService

@@ -272,3 +272,39 @@ export interface ArgoCdEventsParams extends QueryParams {
   /** UID of the involved resource. */
   resourceUID?: string;
 }
+
+/** Request body for wait() — waits until the application reaches a desired state. */
+export interface ArgoCdApplicationWaitRequest {
+  /** Specific resources to wait for (filters the wait scope). */
+  resources?: Array<{ group?: string; kind?: string; name?: string; namespace?: string }>;
+  /** Maximum time to wait as a Go duration string (e.g. `"60s"`, `"5m"`). */
+  timeout?: string;
+  /** Wait until health status is not `Progressing`. */
+  health?: boolean;
+  /** Wait until no active operation is running. */
+  operation?: boolean;
+  /** Wait until the app is not suspended. */
+  suspended?: boolean;
+}
+
+/** Query parameters for deleteResource() — deletes one managed Kubernetes resource. */
+export interface ArgoCdDeleteResourceParams extends QueryParams {
+  /** API group of the resource (e.g. `apps`, empty for core resources). */
+  group?: string;
+  /** Kubernetes kind (e.g. `Deployment`, `Pod`). */
+  kind?: string;
+  /** Namespace of the resource. */
+  namespace?: string;
+  /** Name of the resource. */
+  resourceName?: string;
+  /** API version (e.g. `v1`, `apps/v1`). */
+  version?: string;
+  /** Application namespace for multi-namespace installs. */
+  appNamespace?: string;
+  /** When true, leave child resources as orphans instead of cascading the delete. */
+  orphan?: boolean;
+  /** When true, force-delete even if the resource is stuck terminating. */
+  force?: boolean;
+  /** When true, recursively delete child resources. */
+  recurse?: boolean;
+}

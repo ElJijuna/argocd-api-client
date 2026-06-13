@@ -61,6 +61,17 @@ await argocd.applications.create({ metadata: { name: 'guestbook' } });
 await argocd.applications.update('guestbook', { metadata: { name: 'guestbook' } });
 await argocd.applications.patch('guestbook', { spec: {} });
 await argocd.applications.sync('guestbook', { revision: 'main' });
+await argocd.applications.terminateSync('guestbook');
+await argocd.applications.wait('guestbook', { health: true, timeout: '60s' });
+// → ArgoCdApplication  returned once the app reaches the desired state
+
+await argocd.applications.deleteResource('guestbook', {
+  kind: 'Pod',
+  resourceName: 'api-abc123',
+  version: 'v1',
+  namespace: 'default',
+  force: true,
+});
 await argocd.applications.rollback('guestbook', { id: 3 });
 await argocd.applications.deleteByName('guestbook');
 
@@ -467,7 +478,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `rollback` · `deleteByName` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `deleteByRepo` |
