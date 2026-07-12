@@ -1,3 +1,17 @@
+# [1.5.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.4.0...v1.5.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* update various resource methods to improve consistency and readability ([3d7a836](https://github.com/ElJijuna/argocd-api-client/commit/3d7a83607addab8efeb68d28d4e1413d0273f9c2))
+
+
+### Features
+
+* add streaming support for logs and enhance session management in ArgoCdClient ([c7aa8b2](https://github.com/ElJijuna/argocd-api-client/commit/c7aa8b21cb19fdc995c412c0f71ff46349912e98))
+* enhance architecture documentation and add validation checks for consistency ([2453982](https://github.com/ElJijuna/argocd-api-client/commit/245398227550c7dfb54db650972eb5dbb22cb85a))
+* enhance tests for ArgoCdClient and resource endpoint mapping, adding coverage for session refresh and error handling ([5281440](https://github.com/ElJijuna/argocd-api-client/commit/528144029d9d5b7cfa3155c7c6633f6d2cffa693))
+
 # [1.4.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.3.1...v1.4.0) (2026-06-13)
 
 
