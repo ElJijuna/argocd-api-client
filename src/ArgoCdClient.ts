@@ -273,10 +273,6 @@ export class ArgoCdClient {
     );
   }
 
-  private async post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
-    return this.bodyRequest<T>('POST', path, body, signal);
-  }
-
   private async bodyRequest<T>(
     method: 'POST' | 'PUT' | 'PATCH',
     path: string,
@@ -426,7 +422,7 @@ async function* readLines(response: Response): AsyncGenerator<string> {
     pending += decoder.decode(value, { stream: !done });
     const lines = pending.split('\n');
 
-    pending = lines.pop() ?? '';
+    pending = lines.pop()!;
 
     for (const line of lines) {
       yield line;
