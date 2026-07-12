@@ -27,6 +27,7 @@ export class GpgKeyResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdGpgKeyCreateResponse> {
     const qs = params.upsert ? '?upsert=true' : '';
+
     return this.post<ArgoCdGpgKeyCreateResponse>(`/api/v1/gpgkeys${qs}`, key, signal);
   }
 

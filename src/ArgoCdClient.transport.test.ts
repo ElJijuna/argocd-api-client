@@ -27,16 +27,22 @@ describe('ArgoCdClient transport', () => {
   it('deduplicates concurrent session refreshes', async () => {
     let sessionCalls = 0;
     let applicationCalls = 0;
+
     const transport = jest.fn(async (input: string | URL | Request) => {
       const url = String(input);
+
       if (url.endsWith('/api/v1/session')) {
         sessionCalls += 1;
+
         return jsonResponse({ token: sessionCalls === 1 ? 'initial' : 'refreshed' });
       }
+
       applicationCalls += 1;
+
       if (applicationCalls <= 2) {
         return jsonResponse({ error: 'expired' }, 401);
       }
+
       return jsonResponse({ items: [] });
     });
     const client = await ArgoCdClient.fromCredentials({
@@ -73,7 +79,6 @@ describe('ArgoCdClient transport', () => {
       baseUrl: 'https://argocd.example.com',
       fetch: transport as typeof fetch,
     });
-
     const logs = await client.applications.logs('guestbook');
 
     expect(logs.map((entry) => entry.content)).toEqual(['first', 'second']);
@@ -89,6 +94,7 @@ describe('ArgoCdClient transport', () => {
     });
 
     let error: unknown;
+
     try {
       await client.applications.list();
     } catch (cause) {

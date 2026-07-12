@@ -21,7 +21,6 @@ describe('ArgoCdClient', () => {
   it('creates a session with username and password', async () => {
     mockJson({ token: 'jwt-token' });
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com/' });
-
     const session = await client.createSession({ username: 'admin', password: 'secret' });
 
     expect(session.token).toBe('jwt-token');
@@ -46,7 +45,6 @@ describe('ArgoCdClient', () => {
   it('returns userinfo for the authenticated user', async () => {
     mockJson({ loggedIn: true, username: 'admin', iss: 'argocd', groups: ['admins'] });
     const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
     const info = await client.userInfo();
 
     expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/session/userinfo');
@@ -61,7 +59,6 @@ describe('ArgoCdClient', () => {
       baseUrl: 'https://argocd.example.com',
       token: 'jwt-token',
     });
-
     const apps = await client.applications.list({
       project: ['default'],
       selector: 'team=platform',
@@ -263,6 +260,7 @@ describe('ArgoCdClient', () => {
     await client.applications.list({ selector: undefined });
 
     const url = new URL(mockFetch.mock.calls[0][0] as string);
+
     expect(url.searchParams.has('selector')).toBe(false);
   });
 
@@ -282,6 +280,7 @@ describe('ArgoCdClient', () => {
     });
 
     const headers = mockFetch.mock.calls[0][1]?.headers as Record<string, string>;
+
     expect(headers['Authorization']).toBeUndefined();
   });
 
@@ -294,8 +293,8 @@ describe('ArgoCdClient', () => {
       username: 'admin',
       password: 'secret',
     });
-
     const events: string[] = [];
+
     client.on('request', (e) => events.push(e.url));
 
     await client.refreshSession();
@@ -318,6 +317,7 @@ describe('ArgoCdClient', () => {
 
     // call index 1 is the refreshSession POST
     const headers = mockFetch.mock.calls[1][1]?.headers as Record<string, string>;
+
     expect(headers['Authorization']).toBeUndefined();
   });
 
@@ -332,7 +332,6 @@ describe('ArgoCdClient', () => {
         Platform: 'linux/amd64',
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const version = await client.version.get();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/version');
@@ -350,7 +349,6 @@ describe('ArgoCdClient', () => {
         statusBadgeEnabled: true,
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const settings = await client.settings.get();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/settings');
@@ -364,7 +362,6 @@ describe('ArgoCdClient', () => {
     it('lists repository credential templates', async () => {
       mockJson({ items: [{ url: 'https://github.com/acme', username: 'bot' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const creds = await client.repoCreds.list();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/repocreds');
@@ -374,7 +371,6 @@ describe('ArgoCdClient', () => {
     it('creates a repository credential template', async () => {
       mockJson({ url: 'https://github.com/acme', username: 'bot' });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const cred = await client.repoCreds.create({
         url: 'https://github.com/acme',
         username: 'bot',
@@ -400,7 +396,6 @@ describe('ArgoCdClient', () => {
     it('lists repository certificates', async () => {
       mockJson({ items: [{ serverName: 'github.com', certType: 'ssh', certSubType: 'ssh-rsa' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const certs = await client.certificates.list();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/certificates');
@@ -411,7 +406,6 @@ describe('ArgoCdClient', () => {
     it('creates repository certificates', async () => {
       mockJson({ items: [{ serverName: 'gitlab.com', certType: 'https' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const result = await client.certificates.create([
         { serverName: 'gitlab.com', certType: 'https', certData: 'cert-pem-data' },
       ]);
@@ -428,6 +422,7 @@ describe('ArgoCdClient', () => {
       await client.certificates.delete({ hostNamePattern: 'github.com', certType: 'ssh' });
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('/api/v1/certificates');
       expect(url).toContain('hostNamePattern=github.com');
       expect(url).toContain('certType=ssh');
@@ -449,7 +444,6 @@ describe('ArgoCdClient', () => {
     it('lists GPG keys', async () => {
       mockJson({ items: { A1B2C3D4: { keyID: 'A1B2C3D4', owner: 'alice', trust: 'ultimate' } } });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const keys = await client.gpgKeys.list();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/gpgkeys');
@@ -459,7 +453,6 @@ describe('ArgoCdClient', () => {
     it('imports a GPG key', async () => {
       mockJson({ created: { A1B2C3D4: { keyID: 'A1B2C3D4', owner: 'alice' } }, skipped: [] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const result = await client.gpgKeys.create({
         keyData: '-----BEGIN PGP PUBLIC KEY BLOCK-----...',
       });
@@ -521,6 +514,7 @@ describe('ArgoCdClient', () => {
       await client.applications.refresh('guestbook');
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('refresh=normal');
     });
 
@@ -529,7 +523,6 @@ describe('ArgoCdClient', () => {
         items: [{ reason: 'Synced', message: 'Synced successfully', type: 'Normal', count: 1 }],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const events = await client.projects.events('default');
 
       expect(mockFetch.mock.calls[0][0]).toBe(
@@ -543,7 +536,6 @@ describe('ArgoCdClient', () => {
     it('returns empty events array when items absent for project', async () => {
       mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const events = await client.projects.events('default');
 
       expect(events).toEqual([]);
@@ -552,7 +544,6 @@ describe('ArgoCdClient', () => {
     it('returns repositories for a project', async () => {
       mockJson({ items: [{ repo: 'https://github.com/acme/app.git', type: 'git' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const repos = await client.projects.repositories('default');
 
       expect(mockFetch.mock.calls[0][0]).toBe(
@@ -564,7 +555,6 @@ describe('ArgoCdClient', () => {
     it('lists tokens for an account', async () => {
       mockJson({ items: [{ id: 'tok-1', issuedAt: 1700000000, expiresAt: 1800000000 }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const tokens = await client.accounts.listTokens('admin');
 
       expect(mockFetch.mock.calls[0][0]).toBe(
@@ -577,7 +567,6 @@ describe('ArgoCdClient', () => {
     it('creates an account token', async () => {
       mockJson({ token: 'eyJhb...', id: 'tok-new', issuedAt: 1700000000 });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const result = await client.accounts.createToken('admin', {
         expiresIn: '24h',
         id: 'tok-new',
@@ -603,7 +592,6 @@ describe('ArgoCdClient', () => {
     it('invalidates cluster cache', async () => {
       mockJson({ name: 'in-cluster', server: 'https://kubernetes.default.svc' });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const cluster = await client.clusters.invalidateCache('https://kubernetes.default.svc');
 
       expect(mockFetch.mock.calls[0][0]).toContain(
@@ -765,10 +753,12 @@ describe('ArgoCdClient', () => {
         username: 'admin',
         password: 'secret',
       });
+
       await client.applications.deleteByName('guestbook');
 
       expect(mockFetch).toHaveBeenCalledTimes(4);
-      const lastCall = mockFetch.mock.calls[3][1];
+      const [, , , [, lastCall]] = mockFetch.mock.calls;
+
       expect(lastCall).toMatchObject({ headers: { Authorization: 'Bearer new-token' } });
     });
 
@@ -776,6 +766,7 @@ describe('ArgoCdClient', () => {
       mockJson({ error: 'bad' }, 400);
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const events: import('./ArgoCdClient').RequestEvent[] = [];
+
       client.on('request', (e) => events.push(e));
 
       await expect(client.applications.create({ metadata: { name: 'g' } })).rejects.toThrow(
@@ -791,6 +782,7 @@ describe('ArgoCdClient', () => {
       mockJson({ error: 'not found' }, 404);
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const events: import('./ArgoCdClient').RequestEvent[] = [];
+
       client.on('request', (e) => events.push(e));
 
       await expect(client.applications.deleteByName('nonexistent')).rejects.toThrow(ArgoCdApiError);
@@ -817,7 +809,6 @@ describe('ArgoCdClient', () => {
         tags: ['v2.1.0'],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const meta = await client.applications.revisionMetadata('guestbook', 'v2.1.0');
 
       expect(mockFetch.mock.calls[0][0]).toBe(
@@ -840,6 +831,7 @@ describe('ArgoCdClient', () => {
       await client.applications.revisionMetadata('guestbook', 'HEAD', { appNamespace: 'argocd' });
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('/api/v1/applications/guestbook/revisions/HEAD/metadata');
       expect(url).toContain('appNamespace=argocd');
     });
@@ -852,7 +844,6 @@ describe('ArgoCdClient', () => {
         ],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const result = await client.repositories.apps('https://github.com/acme/app.git');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repositories/');
@@ -872,6 +863,7 @@ describe('ArgoCdClient', () => {
       });
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('revision=main');
       expect(url).toContain('path=charts%2F');
     });
@@ -891,7 +883,6 @@ describe('ArgoCdClient', () => {
     it('waits for application to reach desired state', async () => {
       mockJson({ metadata: { name: 'guestbook' }, status: { health: { status: 'Healthy' } } });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const app = await client.applications.wait('guestbook', { health: true, timeout: '60s' });
 
       expect(mockFetch.mock.calls[0][0]).toBe(
@@ -926,6 +917,7 @@ describe('ArgoCdClient', () => {
       });
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('/api/v1/applications/guestbook/resource');
       expect(url).toContain('kind=Deployment');
       expect(url).toContain('resourceName=api');
@@ -948,6 +940,7 @@ describe('ArgoCdClient', () => {
       });
 
       const url = mockFetch.mock.calls[0][0] as string;
+
       expect(url).toContain('force=true');
       expect(url).toContain('orphan=false');
     });
@@ -965,7 +958,6 @@ describe('ArgoCdClient', () => {
     it('returns the resource tree', async () => {
       mockJson({ nodes: [{ kind: 'Deployment', name: 'guestbook' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const tree = await client.applications.resourceTree('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
@@ -975,7 +967,6 @@ describe('ArgoCdClient', () => {
     it('returns managed resources', async () => {
       mockJson({ items: [{ kind: 'Deployment', name: 'guestbook' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const resources = await client.applications.managedResources('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain(
@@ -987,7 +978,6 @@ describe('ArgoCdClient', () => {
     it('returns empty array when managed-resources items is absent', async () => {
       mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const resources = await client.applications.managedResources('guestbook');
 
       expect(resources).toEqual([]);
@@ -1006,7 +996,6 @@ describe('ArgoCdClient', () => {
           ),
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const logs = await client.applications.logs('guestbook', { tailLines: 2 });
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/logs');
@@ -1042,7 +1031,6 @@ describe('ArgoCdClient', () => {
         ],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const images = await client.applications.images('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
@@ -1052,7 +1040,6 @@ describe('ArgoCdClient', () => {
     it('returns empty images array when nodes have no images', async () => {
       mockJson({ nodes: [{ kind: 'Deployment', name: 'api' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const images = await client.applications.images('guestbook');
 
       expect(images).toEqual([]);
@@ -1072,11 +1059,11 @@ describe('ArgoCdClient', () => {
           ],
         },
       };
+
       mockJson({
         items: [{ kind: 'Pod', name: 'api-abc123', liveState: JSON.stringify(podManifest) }],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const pods = await client.applications.pods('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain(
@@ -1096,7 +1083,6 @@ describe('ArgoCdClient', () => {
     it('skips managed resources without liveState when returning pods', async () => {
       mockJson({ items: [{ kind: 'Pod', name: 'api-abc123' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const pods = await client.applications.pods('guestbook');
 
       expect(pods).toEqual([]);
@@ -1113,9 +1099,9 @@ describe('ArgoCdClient', () => {
         },
         status: { phase: 'Running', containerStatuses: [] },
       };
+
       mockJson({ items: [{ kind: 'Pod', liveState: JSON.stringify(podManifest) }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const containers = await client.applications.containers('guestbook');
 
       expect(containers).toHaveLength(2);
@@ -1143,7 +1129,6 @@ describe('ArgoCdClient', () => {
         ],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const nodes = await client.applications.nodes('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/resource-tree');
@@ -1160,7 +1145,6 @@ describe('ArgoCdClient', () => {
     it('returns empty nodes array when hosts is absent', async () => {
       mockJson({ nodes: [] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const nodes = await client.applications.nodes('guestbook');
 
       expect(nodes).toEqual([]);
@@ -1169,7 +1153,6 @@ describe('ArgoCdClient', () => {
     it('returns health status from application status.health', async () => {
       mockJson({ status: { health: { status: 'Degraded', message: 'OOMKilled' } } });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const health = await client.applications.health('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook');
@@ -1180,7 +1163,6 @@ describe('ArgoCdClient', () => {
     it('returns Unknown health status when status.health is absent', async () => {
       mockJson({ status: {} });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const health = await client.applications.health('guestbook');
 
       expect(health.status).toBe('Unknown');
@@ -1201,7 +1183,6 @@ describe('ArgoCdClient', () => {
         ],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const diffs = await client.applications.diff('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain(
@@ -1219,7 +1200,6 @@ describe('ArgoCdClient', () => {
         ],
       });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const events = await client.applications.events('guestbook');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/applications/guestbook/events');
@@ -1233,7 +1213,6 @@ describe('ArgoCdClient', () => {
     it('returns empty events array when items is absent', async () => {
       mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const events = await client.applications.events('guestbook');
 
       expect(events).toEqual([]);
@@ -1252,7 +1231,6 @@ describe('ArgoCdClient', () => {
     it('returns repository refs', async () => {
       mockJson({ branches: ['main', 'develop'], tags: ['v1.0.0'] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const refs = await client.repositories.refs('https://github.com/acme/app.git');
 
       expect(mockFetch.mock.calls[0][0]).toContain('/api/v1/repositories/');
@@ -1264,7 +1242,6 @@ describe('ArgoCdClient', () => {
     it('lists ApplicationSets', async () => {
       mockJson({ items: [{ metadata: { name: 'my-set' } }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const sets = await client.applicationSets.list();
 
       expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/applicationsets');

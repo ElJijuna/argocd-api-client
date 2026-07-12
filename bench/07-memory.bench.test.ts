@@ -1,7 +1,7 @@
 import { ArgoCdClient } from '../src/ArgoCdClient';
 import { applicationList, makeMockResponse } from './fixtures';
 
-const gc = (globalThis as unknown as { gc?: () => void }).gc;
+const { gc } = globalThis as unknown as { gc?: () => void };
 
 function forceGc(): void {
   if (gc) {
@@ -39,7 +39,6 @@ function measureHeap(label: string, fn: () => void, iterations = 10_000): void {
 
   forceGc();
   const after = process.memoryUsage().heapUsed;
-
   const heapDelta = after - before;
   const bytesPerOp = heapDelta / iterations;
   const gcNote = gc ? '' : ' (approx; run with --expose-gc for precision)';
@@ -69,7 +68,6 @@ async function measureHeapAsync(
 
   forceGc();
   const after = process.memoryUsage().heapUsed;
-
   const heapDelta = after - before;
   const bytesPerOp = heapDelta / iterations;
   const gcNote = gc ? '' : ' (approx)';

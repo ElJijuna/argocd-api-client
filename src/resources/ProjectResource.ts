@@ -59,6 +59,7 @@ export class ProjectResource {
       undefined,
       signal,
     );
+
     return res.items ?? [];
   }
 

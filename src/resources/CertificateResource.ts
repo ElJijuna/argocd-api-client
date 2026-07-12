@@ -40,16 +40,21 @@ export class CertificateResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdCertificateList> {
     const query = new URLSearchParams();
+
     if (params.hostNamePattern) {
       query.set('hostNamePattern', params.hostNamePattern);
     }
+
     if (params.certType) {
       query.set('certType', params.certType);
     }
+
     if (params.certSubType) {
       query.set('certSubType', params.certSubType);
     }
+
     const qs = query.toString();
+
     return this.deleteRequest<ArgoCdCertificateList>(
       `/api/v1/certificates${qs ? `?${qs}` : ''}`,
       signal,

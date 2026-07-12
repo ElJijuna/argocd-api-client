@@ -196,6 +196,7 @@ export class ArgoCdClient {
       signal,
       false,
     );
+
     this.token = token;
   }
 
@@ -250,6 +251,7 @@ export class ArgoCdClient {
     signal?: AbortSignal,
   ): Promise<T[]> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
+
     return this.executeRequest(
       url,
       'GET',
@@ -261,6 +263,7 @@ export class ArgoCdClient {
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
+
     return this.executeRequest(
       url,
       'GET',
@@ -283,6 +286,7 @@ export class ArgoCdClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const serialized = JSON.stringify(body);
+
     return this.executeRequest(
       url,
       method,
@@ -300,6 +304,7 @@ export class ArgoCdClient {
 
   private async emptyRequest<T>(method: 'DELETE', path: string, signal?: AbortSignal): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+
     return this.executeRequest(
       url,
       method,
@@ -318,19 +323,26 @@ export class ArgoCdClient {
     retryOnUnauthorized = true,
   ): Promise<T> {
     const startedAt = new Date();
+
     let statusCode: number | undefined;
+
     try {
       const tokenAtStart = this.token;
+
       let response = await this.fetch(url, init());
+
       if (response.status === 401 && this.credentials && retryOnUnauthorized) {
         if (this.token === tokenAtStart) {
           await this.refreshSession(signal);
         }
+
         response = await this.fetch(url, init());
       }
+
       statusCode = response.status;
       const result = await parse(response, { url, method });
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -339,9 +351,11 @@ export class ArgoCdClient {
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         statusCode,
       });
+
       return result;
     } catch (error) {
       const finishedAt = new Date();
+
       this.emit('request', {
         url,
         method,
@@ -351,6 +365,7 @@ export class ArgoCdClient {
         statusCode,
         error: error as Error,
       });
+
       throw error;
     }
   }
@@ -375,15 +390,19 @@ async function parseNdJsonResponse<T>(response: Response, context: RequestContex
   }
 
   const results: T[] = [];
+
   for await (const line of readLines(response)) {
     if (!line) {
       continue;
     }
+
     const parsed = JSON.parse(line) as { result?: T; error?: unknown };
+
     if (!parsed.error && parsed.result) {
       results.push(parsed.result);
     }
   }
+
   return results;
 }
 
@@ -392,24 +411,32 @@ async function* readLines(response: Response): AsyncGenerator<string> {
     for (const line of (await response.text()).split('\n')) {
       yield line;
     }
+
     return;
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+
   let pending = '';
+
   while (true) {
     const { done, value } = await reader.read();
+
     pending += decoder.decode(value, { stream: !done });
     const lines = pending.split('\n');
+
     pending = lines.pop() ?? '';
+
     for (const line of lines) {
       yield line;
     }
+
     if (done) {
       break;
     }
   }
+
   if (pending) {
     yield pending;
   }
@@ -420,9 +447,11 @@ async function createApiError(
   context: RequestContext,
 ): Promise<ArgoCdApiError> {
   let body: unknown;
+
   try {
     if (typeof response.text === 'function') {
       const text = await response.text();
+
       try {
         body = JSON.parse(text);
       } catch {
@@ -434,10 +463,12 @@ async function createApiError(
   } catch {
     body = undefined;
   }
+
   const requestId =
     response.headers?.get('x-request-id') ??
     response.headers?.get('x-argo-request-id') ??
     undefined;
+
   return new ArgoCdApiError(response.status, response.statusText, { ...context, body, requestId });
 }
 

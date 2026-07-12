@@ -310,6 +310,7 @@ export class ApplicationResource {
       params,
       signal,
     );
+
     return res.items ?? [];
   }
 
@@ -349,6 +350,7 @@ export class ApplicationResource {
   ): Promise<string[]> {
     const tree = await this.resourceTree(name, params, signal);
     const all = (tree.nodes ?? []).flatMap((n) => n.images ?? []);
+
     return [...new Set(all)];
   }
 
@@ -378,6 +380,7 @@ export class ApplicationResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdPod[]> {
     const resources = await this.managedResources(name, { ...params, kind: 'Pod' }, signal);
+
     return resources
       .filter((r) => r.liveState)
       .map((r) => {
@@ -385,15 +388,19 @@ export class ApplicationResource {
         const containerStatuses: Array<Record<string, unknown>> =
           manifest.status?.containerStatuses ?? [];
         const toContainer = (c: Record<string, unknown>): ArgoCdContainer => {
-          const cs = containerStatuses.find((s) => s['name'] === c['name']) ?? {};
+          const { name, image } = c;
+          const cs = containerStatuses.find(({ name: statusName }) => statusName === name) ?? {};
+          const { ready, restartCount, state } = cs;
+
           return {
-            name: c['name'] as string,
-            image: c['image'] as string,
-            ready: cs['ready'] as boolean | undefined,
-            restartCount: cs['restartCount'] as number | undefined,
-            state: cs['state'] as Record<string, unknown> | undefined,
+            name: name as string,
+            image: image as string,
+            ready: ready as boolean | undefined,
+            restartCount: restartCount as number | undefined,
+            state: state as Record<string, unknown> | undefined,
           };
         };
+
         return {
           name: manifest.metadata?.name,
           namespace: manifest.metadata?.namespace,
@@ -431,6 +438,7 @@ export class ApplicationResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdContainer[]> {
     const pods = await this.pods(name, params, signal);
+
     return pods.flatMap((pod) => pod.containers.map((c) => ({ ...c, podName: pod.name })));
   }
 
@@ -457,16 +465,27 @@ export class ApplicationResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdNode[]> {
     const tree = await this.resourceTree(name, params, signal);
+
     return (tree.hosts ?? []).map((h) => {
-      const sys = h['systemInfo'] as Record<string, unknown> | undefined;
+      const { name: hostName, systemInfo } = h;
+      const sys = systemInfo as Record<string, unknown> | undefined;
+      const {
+        osImage,
+        operatingSystem,
+        architecture,
+        kernelVersion,
+        containerRuntimeVersion,
+        kubeletVersion,
+      } = sys ?? {};
+
       return {
-        name: h['name'] as string | undefined,
-        osImage: sys?.['osImage'] as string | undefined,
-        operatingSystem: sys?.['operatingSystem'] as string | undefined,
-        architecture: sys?.['architecture'] as string | undefined,
-        kernelVersion: sys?.['kernelVersion'] as string | undefined,
-        containerRuntimeVersion: sys?.['containerRuntimeVersion'] as string | undefined,
-        kubeletVersion: sys?.['kubeletVersion'] as string | undefined,
+        name: hostName as string | undefined,
+        osImage: osImage as string | undefined,
+        operatingSystem: operatingSystem as string | undefined,
+        architecture: architecture as string | undefined,
+        kernelVersion: kernelVersion as string | undefined,
+        containerRuntimeVersion: containerRuntimeVersion as string | undefined,
+        kubeletVersion: kubeletVersion as string | undefined,
         systemInfo: sys,
       };
     });
@@ -497,6 +516,7 @@ export class ApplicationResource {
     const h = (app.status as Record<string, unknown> | undefined)?.['health'] as
       | Record<string, unknown>
       | undefined;
+
     return {
       status: (h?.['status'] as string | undefined) ?? 'Unknown',
       message: h?.['message'] as string | undefined,
@@ -524,6 +544,7 @@ export class ApplicationResource {
     signal?: AbortSignal,
   ): Promise<ArgoCdManagedResource[]> {
     const resources = await this.managedResources(name, params, signal);
+
     return resources.filter(
       (r) => r.liveState && r.normalizedLiveState && r.liveState !== r.normalizedLiveState,
     );
@@ -561,6 +582,7 @@ export class ApplicationResource {
       params,
       signal,
     );
+
     return res.items ?? [];
   }
 
@@ -628,12 +650,15 @@ export class ApplicationResource {
     signal?: AbortSignal,
   ): Promise<Record<string, never>> {
     const query = new URLSearchParams();
+
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {
         query.set(key, String(value));
       }
     }
+
     const qs = query.toString();
+
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/applications/${encodeURIComponent(name)}/resource${qs ? `?${qs}` : ''}`,
       signal,
