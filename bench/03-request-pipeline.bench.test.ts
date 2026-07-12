@@ -10,24 +10,20 @@ describe('03 - Request pipeline (mocked fetch)', () => {
     console.log('\n03 - Request pipeline (mocked fetch)');
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
   it('applications.list() GET', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(() => Promise.resolve(makeMockResponse(applicationList)));
-    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt-token' });
+    const fetch = () => Promise.resolve(makeMockResponse(applicationList));
+    const client = new ArgoCdClient({
+      baseUrl: 'https://argocd.example.com',
+      token: 'jwt-token',
+      fetch,
+    });
 
     await runBenchAsync('applications.list()', () => client.applications.list(), ITERATIONS);
   });
 
   it('createSession() POST', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(() => Promise.resolve(makeMockResponse(session)));
-    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com' });
+    const fetch = () => Promise.resolve(makeMockResponse(session));
+    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', fetch });
 
     await runBenchAsync(
       'createSession()',
@@ -37,10 +33,12 @@ describe('03 - Request pipeline (mocked fetch)', () => {
   });
 
   it('applications.sync() POST body', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(() => Promise.resolve(makeMockResponse(applicationList.items[0])));
-    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt-token' });
+    const fetch = () => Promise.resolve(makeMockResponse(applicationList.items[0]));
+    const client = new ArgoCdClient({
+      baseUrl: 'https://argocd.example.com',
+      token: 'jwt-token',
+      fetch,
+    });
 
     await runBenchAsync(
       'applications.sync()',
@@ -50,10 +48,12 @@ describe('03 - Request pipeline (mocked fetch)', () => {
   });
 
   it('applications.deleteByName() DELETE', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation(() => Promise.resolve(makeMockResponse(emptyObject)));
-    const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt-token' });
+    const fetch = () => Promise.resolve(makeMockResponse(emptyObject));
+    const client = new ArgoCdClient({
+      baseUrl: 'https://argocd.example.com',
+      token: 'jwt-token',
+      fetch,
+    });
 
     await runBenchAsync(
       'applications.deleteByName()',

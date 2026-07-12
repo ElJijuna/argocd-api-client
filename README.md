@@ -17,6 +17,9 @@
 
 TypeScript client for the official Argo CD REST API. Works in Node.js 18+ and browsers via `fetch`.
 
+Maintainers and contributors: see [Architecture](ARCHITECTURE.md) for system boundaries, request
+lifecycle, extension guidance, and design decisions.
+
 Argo CD exposes Swagger docs at `/swagger-ui` on each Argo CD server. Argo CD authenticates API requests with JWTs; pass the JWT in the `Authorization` header as `Bearer <jwt>`.
 
 ## Install

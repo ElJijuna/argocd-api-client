@@ -20,6 +20,7 @@
     "build": "tsup",
     "check": "npm run lint && npm test",
     "docs": "typedoc",
+    "docs:check": "node scripts/check-architecture.mjs",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "eslint .",

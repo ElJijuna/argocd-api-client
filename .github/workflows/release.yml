@@ -40,6 +40,9 @@ jobs:
       - name: Check
         run: npm run check
 
+      - name: Check architecture documentation
+        run: npm run docs:check
+
       - name: Build
         run: npm run build
 

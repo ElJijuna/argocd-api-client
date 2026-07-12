@@ -32,6 +32,8 @@ export interface ArgoCdClientOptions {
   baseUrl: string;
   /** Argo CD JWT sent as `Authorization: Bearer <jwt>` for authenticated endpoints. */
   token?: string;
+  /** Fetch-compatible transport. Defaults to the runtime's global `fetch`. */
+  fetch?: typeof globalThis.fetch;
 }
 
 export interface ArgoCdCredentialsOptions {
@@ -43,6 +45,8 @@ export interface ArgoCdCredentialsOptions {
   password: string;
   /** Optional AbortSignal for the initial login request. */
   signal?: AbortSignal;
+  /** Fetch-compatible transport. Defaults to the runtime's global `fetch`. */
+  fetch?: typeof globalThis.fetch;
 }
 
 interface StoredCredentials {
@@ -89,6 +93,8 @@ export class ArgoCdClient {
   private readonly baseUrl: string;
   private token?: string;
   private credentials?: StoredCredentials;
+  private readonly fetch: typeof globalThis.fetch;
+  private refreshPromise?: Promise<void>;
   private readonly publicHeaders = { Accept: 'application/json' };
   private readonly postHeaders = { Accept: 'application/json', 'Content-Type': 'application/json' };
   private readonly listeners: Map<
@@ -99,6 +105,7 @@ export class ArgoCdClient {
   constructor(options: ArgoCdClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.token = options.token;
+    this.fetch = options.fetch ?? globalThis.fetch;
     const request = <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
       this.request<T>(path, params, signal);
     const post = <T>(path: string, body?: unknown, signal?: AbortSignal) =>
@@ -150,8 +157,8 @@ export class ArgoCdClient {
    * Stores the credentials internally so the client can auto-refresh on 401 responses.
    */
   static async fromCredentials(options: ArgoCdCredentialsOptions): Promise<ArgoCdClient> {
-    const { baseUrl, username, password, signal } = options;
-    const client = new ArgoCdClient({ baseUrl });
+    const { baseUrl, username, password, signal, fetch } = options;
+    const client = new ArgoCdClient({ baseUrl, fetch });
     const { token } = await client.createSession({ username, password }, signal);
 
     client.token = token;
@@ -171,9 +178,24 @@ export class ArgoCdClient {
       );
     }
 
-    this.token = undefined;
-    const { token } = await this.createSession(this.credentials, signal);
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.performSessionRefresh(signal).finally(() => {
+        this.refreshPromise = undefined;
+      });
+    }
 
+    return this.refreshPromise;
+  }
+
+  private async performSessionRefresh(signal?: AbortSignal): Promise<void> {
+    this.token = undefined;
+    const { token } = await this.bodyRequest<ArgoCdSession>(
+      'POST',
+      '/api/v1/session',
+      this.credentials,
+      signal,
+      false,
+    );
     this.token = token;
   }
 
@@ -183,7 +205,7 @@ export class ArgoCdClient {
    * `POST /api/v1/session`
    */
   async createSession(body: ArgoCdSessionRequest, signal?: AbortSignal): Promise<ArgoCdSession> {
-    return this.post<ArgoCdSession>('/api/v1/session', body, signal);
+    return this.bodyRequest<ArgoCdSession>('POST', '/api/v1/session', body, signal, false);
   }
 
   /**
@@ -228,92 +250,24 @@ export class ArgoCdClient {
     signal?: AbortSignal,
   ): Promise<T[]> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
-    const startedAt = new Date();
-    let statusCode: number | undefined;
-    try {
-      let response = await fetch(url, { headers: this.authHeaders(), signal });
-      if (response.status === 401 && this.credentials) {
-        await this.refreshSession(signal);
-        response = await fetch(url, { headers: this.authHeaders(), signal });
-      }
-      statusCode = response.status;
-      if (!response.ok) {
-        throw new ArgoCdApiError(response.status, response.statusText);
-      }
-      const text = await response.text();
-      const result = text
-        .split('\n')
-        .filter(Boolean)
-        .flatMap((line) => {
-          const parsed = JSON.parse(line) as { result?: T; error?: unknown };
-          return parsed.error || !parsed.result ? [] : [parsed.result];
-        });
-      const finishedAt = new Date();
-      this.emit('request', {
-        url,
-        method: 'GET',
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-      });
-      return result;
-    } catch (error) {
-      const finishedAt = new Date();
-      this.emit('request', {
-        url,
-        method: 'GET',
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-        error: error as Error,
-      });
-      throw error;
-    }
+    return this.executeRequest(
+      url,
+      'GET',
+      () => ({ headers: this.authHeaders(), signal }),
+      parseNdJsonResponse<T>,
+      signal,
+    );
   }
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
     const url = buildUrl(`${this.baseUrl}${path}`, params);
-    const startedAt = new Date();
-
-    let statusCode: number | undefined;
-
-    try {
-      let response = await fetch(url, { headers: this.authHeaders(), signal });
-      if (response.status === 401 && this.credentials) {
-        await this.refreshSession(signal);
-        response = await fetch(url, { headers: this.authHeaders(), signal });
-      }
-
-      statusCode = response.status;
-      const result = await parseResponse<T>(response);
-      const finishedAt = new Date();
-
-      this.emit('request', {
-        url,
-        method: 'GET',
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-      });
-
-      return result;
-    } catch (error) {
-      const finishedAt = new Date();
-
-      this.emit('request', {
-        url,
-        method: 'GET',
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-        error: error as Error,
-      });
-      throw error;
-    }
+    return this.executeRequest(
+      url,
+      'GET',
+      () => ({ headers: this.authHeaders(), signal }),
+      parseJsonResponse<T>,
+      signal,
+    );
   }
 
   private async post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -325,77 +279,58 @@ export class ArgoCdClient {
     path: string,
     body: unknown,
     signal?: AbortSignal,
+    authenticate = true,
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const serialized = JSON.stringify(body);
-    const startedAt = new Date();
-
-    let statusCode: number | undefined;
-
-    try {
-      let response = await fetch(url, {
+    return this.executeRequest(
+      url,
+      method,
+      () => ({
         method,
-        headers: this.authHeaders(true),
+        headers: authenticate ? this.authHeaders(true) : this.postHeaders,
         body: serialized,
         signal,
-      });
-      if (response.status === 401 && this.credentials) {
-        await this.refreshSession(signal);
-        response = await fetch(url, {
-          method,
-          headers: this.authHeaders(true),
-          body: serialized,
-          signal,
-        });
-      }
-
-      statusCode = response.status;
-      const result = await parseResponse<T>(response);
-      const finishedAt = new Date();
-
-      this.emit('request', {
-        url,
-        method,
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-      });
-
-      return result;
-    } catch (error) {
-      const finishedAt = new Date();
-
-      this.emit('request', {
-        url,
-        method,
-        startedAt,
-        finishedAt,
-        durationMs: finishedAt.getTime() - startedAt.getTime(),
-        statusCode,
-        error: error as Error,
-      });
-      throw error;
-    }
+      }),
+      parseJsonResponse<T>,
+      signal,
+      authenticate,
+    );
   }
 
   private async emptyRequest<T>(method: 'DELETE', path: string, signal?: AbortSignal): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    return this.executeRequest(
+      url,
+      method,
+      () => ({ method, headers: this.authHeaders(), signal }),
+      parseJsonResponse<T>,
+      signal,
+    );
+  }
+
+  private async executeRequest<T>(
+    url: string,
+    method: RequestEvent['method'],
+    init: () => RequestInit,
+    parse: (response: Response, context: RequestContext) => Promise<T>,
+    signal?: AbortSignal,
+    retryOnUnauthorized = true,
+  ): Promise<T> {
     const startedAt = new Date();
-
     let statusCode: number | undefined;
-
     try {
-      let response = await fetch(url, { method, headers: this.authHeaders(), signal });
-      if (response.status === 401 && this.credentials) {
-        await this.refreshSession(signal);
-        response = await fetch(url, { method, headers: this.authHeaders(), signal });
+      const tokenAtStart = this.token;
+      let response = await this.fetch(url, init());
+      if (response.status === 401 && this.credentials && retryOnUnauthorized) {
+        if (this.token === tokenAtStart) {
+          await this.refreshSession(signal);
+        }
+        response = await this.fetch(url, init());
       }
-
       statusCode = response.status;
-      const result = await parseResponse<T>(response);
+      const result = await parse(response, { url, method });
       const finishedAt = new Date();
-
       this.emit('request', {
         url,
         method,
@@ -404,11 +339,9 @@ export class ArgoCdClient {
         durationMs: finishedAt.getTime() - startedAt.getTime(),
         statusCode,
       });
-
       return result;
     } catch (error) {
       const finishedAt = new Date();
-
       this.emit('request', {
         url,
         method,
@@ -423,12 +356,89 @@ export class ArgoCdClient {
   }
 }
 
-async function parseResponse<T>(response: Response): Promise<T> {
+interface RequestContext {
+  url: string;
+  method: RequestEvent['method'];
+}
+
+async function parseJsonResponse<T>(response: Response, context: RequestContext): Promise<T> {
   if (!response.ok) {
-    throw new ArgoCdApiError(response.status, response.statusText);
+    throw await createApiError(response, context);
   }
 
   return (await response.json()) as T;
+}
+
+async function parseNdJsonResponse<T>(response: Response, context: RequestContext): Promise<T[]> {
+  if (!response.ok) {
+    throw await createApiError(response, context);
+  }
+
+  const results: T[] = [];
+  for await (const line of readLines(response)) {
+    if (!line) {
+      continue;
+    }
+    const parsed = JSON.parse(line) as { result?: T; error?: unknown };
+    if (!parsed.error && parsed.result) {
+      results.push(parsed.result);
+    }
+  }
+  return results;
+}
+
+async function* readLines(response: Response): AsyncGenerator<string> {
+  if (!response.body) {
+    for (const line of (await response.text()).split('\n')) {
+      yield line;
+    }
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    pending += decoder.decode(value, { stream: !done });
+    const lines = pending.split('\n');
+    pending = lines.pop() ?? '';
+    for (const line of lines) {
+      yield line;
+    }
+    if (done) {
+      break;
+    }
+  }
+  if (pending) {
+    yield pending;
+  }
+}
+
+async function createApiError(
+  response: Response,
+  context: RequestContext,
+): Promise<ArgoCdApiError> {
+  let body: unknown;
+  try {
+    if (typeof response.text === 'function') {
+      const text = await response.text();
+      try {
+        body = JSON.parse(text);
+      } catch {
+        body = text || undefined;
+      }
+    } else if (typeof response.json === 'function') {
+      body = await response.json();
+    }
+  } catch {
+    body = undefined;
+  }
+  const requestId =
+    response.headers?.get('x-request-id') ??
+    response.headers?.get('x-argo-request-id') ??
+    undefined;
+  return new ArgoCdApiError(response.status, response.statusText, { ...context, body, requestId });
 }
 
 function buildUrl(url: string, params?: Record<string, QueryValue | undefined>): string {
