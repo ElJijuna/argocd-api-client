@@ -30,6 +30,52 @@ describe('ArgoCdClient transport', () => {
     expect(sessionCalls).toBe(2);
   });
 
+  it('manages local session state explicitly', async () => {
+    let sessionCalls = 0;
+    let resolveRefresh!: (response: Response) => void;
+
+    const refreshResponse = new Promise<Response>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const transport = jest.fn(async (input: string | URL | Request, _init?: RequestInit) => {
+      if (String(input).endsWith('/api/v1/session')) {
+        sessionCalls += 1;
+
+        return sessionCalls === 1 ? jsonResponse({ token: 'initial' }) : refreshResponse;
+      }
+
+      return jsonResponse({ items: [] });
+    });
+    const client = await ArgoCdClient.fromCredentials({
+      baseUrl: 'https://argocd.example.com',
+      username: 'admin',
+      password: 'secret',
+      fetch: transport as typeof fetch,
+    });
+
+    expect(client.hasCredentials()).toBe(true);
+
+    const refreshing = client.refreshSession();
+
+    expect(client.setToken('manual')).toBe(client);
+    resolveRefresh(jsonResponse({ token: 'stale-refresh' }));
+    await refreshing;
+    await client.applications.list();
+
+    expect(transport.mock.calls.at(-1)?.[1]).toMatchObject({
+      headers: { Authorization: 'Bearer manual' },
+    });
+    expect(client.clearSession()).toBe(client);
+    expect(client.hasCredentials()).toBe(false);
+
+    await client.applications.list();
+
+    expect(transport.mock.calls.at(-1)?.[1]).toMatchObject({
+      headers: { Accept: 'application/json' },
+    });
+    expect(transport.mock.calls.at(-1)?.[1]?.headers).not.toHaveProperty('Authorization');
+  });
+
   it('uses an injected fetch implementation', async () => {
     const transport = jest.fn(async (_input: string | URL | Request) =>
       jsonResponse({ Version: 'v2.14.0' }),
@@ -103,6 +149,65 @@ describe('ArgoCdClient transport', () => {
     const logs = await client.applications.logs('guestbook');
 
     expect(logs.map((entry) => entry.content)).toEqual(['first', 'second']);
+  });
+
+  it('streams logs lazily and emits an event after completion', async () => {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(`${JSON.stringify({ result: { content: 'first' } })}\n`));
+        controller.enqueue(encoder.encode(JSON.stringify({ result: { content: 'second' } })));
+        controller.close();
+      },
+    });
+    const transport = jest.fn(async () => new Response(stream));
+    const client = new ArgoCdClient({
+      baseUrl: 'https://argocd.example.com',
+      fetch: transport as typeof fetch,
+    });
+    const events: import('./ArgoCdClient').RequestEvent[] = [];
+
+    client.on('request', (event) => events.push(event));
+
+    const iterable = client.applications.logsStream('guestbook');
+
+    expect(transport).not.toHaveBeenCalled();
+
+    const entries = [];
+
+    for await (const entry of iterable) {
+      entries.push(entry);
+    }
+
+    expect(entries.map(({ content }) => content)).toEqual(['first', 'second']);
+    expect(events).toMatchObject([{ method: 'GET', statusCode: 200, error: undefined }]);
+  });
+
+  it('cancels the response reader when log iteration stops early', async () => {
+    const cancel = jest.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            `${JSON.stringify({ result: { content: 'first' } })}\n${JSON.stringify({ result: { content: 'second' } })}\n`,
+          ),
+        );
+      },
+      cancel,
+    });
+    const client = new ArgoCdClient({
+      baseUrl: 'https://argocd.example.com',
+      fetch: (async () => new Response(stream)) as typeof fetch,
+    });
+    const entries = [];
+
+    for await (const entry of client.applications.logsStream('guestbook')) {
+      entries.push(entry);
+      break;
+    }
+
+    expect(entries).toMatchObject([{ content: 'first' }]);
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it('handles blank NDJSON lines through the text fallback', async () => {

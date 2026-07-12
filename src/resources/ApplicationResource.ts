@@ -259,6 +259,32 @@ export class ApplicationResource {
   }
 
   /**
+   * Streams pod logs as they arrive from Argo CD without buffering the full response.
+   * Iteration is lazy: the HTTP request starts when the iterable is consumed.
+   *
+   * @param name - Application name.
+   * @param params - Log options. Set `follow: true` to keep receiving new entries.
+   * @param signal - Optional `AbortSignal` to stop the stream.
+   * @returns Async iterable of log entries.
+   *
+   * @example
+   * for await (const entry of argocd.applications.logsStream('guestbook', { follow: true })) {
+   *   console.log(entry.content);
+   * }
+   */
+  logsStream(
+    name: string,
+    params: ArgoCdApplicationLogsParams = {},
+    signal?: AbortSignal,
+  ): AsyncIterable<ArgoCdLogEntry> {
+    return this.ndJson.stream<ArgoCdLogEntry>(
+      `/api/v1/applications/${encodeURIComponent(name)}/logs`,
+      params,
+      signal,
+    );
+  }
+
+  /**
    * Returns the live Kubernetes resource tree for an application — all nodes (Deployments, ReplicaSets,
    * Pods, Services…) with health, status, and parent references.
    *

@@ -106,6 +106,7 @@ Resource methods select one of four parser/request configurations over one share
 - `emptyRequest`: DELETE requests without a request body; successful responses are still parsed as
   JSON.
 - `ndJsonRequest`: GET requests whose newline-delimited JSON response is converted to an array.
+- `ndJsonStreamRequest`: lazy GET requests exposing newline-delimited JSON as an `AsyncIterable`.
 
 A logical request follows this sequence:
 
@@ -117,15 +118,19 @@ A logical request follows this sequence:
    optional `AbortSignal`.
 4. If the response is `401` and stored username/password credentials exist, refresh the session token
    and retry once. Token-only clients do not retry.
-5. Parse the response. JSON pipelines call `response.json()` after checking `response.ok`. The NDJSON
-   pipeline decodes the response stream incrementally, preserves lines across chunk boundaries, and
-   returns successful `result` values. A text fallback supports responses without a readable body.
+5. Parse the response. JSON pipelines call `response.json()` after checking `response.ok`. NDJSON
+   pipelines decode incrementally and preserve lines across chunk boundaries. `logs()` collects
+   successful values into an array; `logsStream()` yields them as they arrive. A text fallback supports
+   responses without a readable body.
 6. Emit one `request` event for the logical operation. The event records URL, method, timestamps,
    duration, final status when available, and any thrown error.
 7. Return the typed value or rethrow the error.
 
 `AbortSignal` is passed to the initial fetch, credential refresh, and retry. Aborting rejects the
 operation and produces a failed request event.
+
+Streaming requests are lazy. Their request event is emitted when iteration completes, fails, aborts,
+or closes early; early closure cancels the response reader.
 
 ### Authentication ownership
 
@@ -138,4 +143,6 @@ There are two authentication modes:
 Concurrent refresh attempts share one in-flight promise, preventing duplicate session exchanges.
 
 Credentials and tokens are private in-memory state. `deleteSession()` invalidates the session on the
-server but does not clear the token or stored credentials in the client instance.
+server but does not clear the token or stored credentials in the client instance. `setToken()`
+replaces local token state, while `clearSession()` removes both token and credentials. A session
+generation counter prevents an older in-flight refresh from overwriting either explicit change.

@@ -11,7 +11,7 @@ import { RepoCredsResource } from './resources/RepoCredsResource';
 import { RepositoryResource } from './resources/RepositoryResource';
 import { SettingsResource } from './resources/SettingsResource';
 import { VersionResource } from './resources/VersionResource';
-import type { QueryParams, QueryValue } from './resources/types';
+import type { NdJsonRequestFn, QueryParams, QueryValue } from './resources/types';
 
 export interface RequestEvent {
   url: string;
@@ -95,6 +95,7 @@ export class ArgoCdClient {
   private credentials?: StoredCredentials;
   private readonly fetch: typeof globalThis.fetch;
   private refreshPromise?: Promise<void>;
+  private sessionGeneration = 0;
   private readonly publicHeaders = { Accept: 'application/json' };
   private readonly postHeaders = { Accept: 'application/json', 'Content-Type': 'application/json' };
   private readonly listeners: Map<
@@ -116,8 +117,11 @@ export class ArgoCdClient {
       this.bodyRequest<T>('PATCH', path, body, signal);
     const del = <T>(path: string, signal?: AbortSignal) =>
       this.emptyRequest<T>('DELETE', path, signal);
-    const ndJson = <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
-      this.ndJsonRequest<T>(path, params, signal);
+    const ndJson = (<T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
+      this.ndJsonRequest<T>(path, params, signal)) as NdJsonRequestFn;
+
+    ndJson.stream = <T>(path: string, params?: QueryParams, signal?: AbortSignal) =>
+      this.ndJsonStreamRequest<T>(path, params, signal);
 
     this.applications = new ApplicationResource(request, post, del, patch, put, ndJson);
     this.applicationSets = new ApplicationSetResource(request, post, put, del);
@@ -139,6 +143,28 @@ export class ArgoCdClient {
     this.listeners.set(event, callbacks);
 
     return this;
+  }
+
+  /** Replaces the current bearer token while preserving stored refresh credentials. */
+  setToken(token?: string): this {
+    this.sessionGeneration += 1;
+    this.token = token;
+
+    return this;
+  }
+
+  /** Clears the local token and stored credentials without making a server request. */
+  clearSession(): this {
+    this.sessionGeneration += 1;
+    this.token = undefined;
+    this.credentials = undefined;
+
+    return this;
+  }
+
+  /** Returns whether this client can refresh a session using stored credentials. */
+  hasCredentials(): boolean {
+    return this.credentials !== undefined;
   }
 
   private emit<K extends keyof ArgoCdClientEvents>(
@@ -188,6 +214,8 @@ export class ArgoCdClient {
   }
 
   private async performSessionRefresh(signal?: AbortSignal): Promise<void> {
+    const generation = this.sessionGeneration;
+
     this.token = undefined;
     const { token } = await this.bodyRequest<ArgoCdSession>(
       'POST',
@@ -197,7 +225,9 @@ export class ArgoCdClient {
       false,
     );
 
-    this.token = token;
+    if (this.sessionGeneration === generation) {
+      this.token = token;
+    }
   }
 
   /**
@@ -250,15 +280,55 @@ export class ArgoCdClient {
     params?: QueryParams,
     signal?: AbortSignal,
   ): Promise<T[]> {
-    const url = buildUrl(`${this.baseUrl}${path}`, params);
+    const results: T[] = [];
 
-    return this.executeRequest(
-      url,
-      'GET',
-      () => ({ headers: this.authHeaders(), signal }),
-      parseNdJsonResponse<T>,
-      signal,
-    );
+    for await (const item of this.ndJsonStreamRequest<T>(path, params, signal)) {
+      results.push(item);
+    }
+
+    return results;
+  }
+
+  private async *ndJsonStreamRequest<T>(
+    path: string,
+    params?: QueryParams,
+    signal?: AbortSignal,
+  ): AsyncGenerator<T> {
+    const url = buildUrl(`${this.baseUrl}${path}`, params);
+    const startedAt = new Date();
+
+    let statusCode: number | undefined;
+    let requestError: Error | undefined;
+
+    try {
+      const response = await this.fetchWithRetry(
+        url,
+        () => ({ headers: this.authHeaders(), signal }),
+        signal,
+      );
+
+      statusCode = response.status;
+
+      for await (const item of parseNdJsonStreamResponse<T>(response, { url, method: 'GET' })) {
+        yield item;
+      }
+    } catch (error) {
+      requestError = error as Error;
+
+      throw error;
+    } finally {
+      const finishedAt = new Date();
+
+      this.emit('request', {
+        url,
+        method: 'GET',
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        statusCode,
+        error: requestError,
+      });
+    }
   }
 
   private async request<T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T> {
@@ -323,17 +393,7 @@ export class ArgoCdClient {
     let statusCode: number | undefined;
 
     try {
-      const tokenAtStart = this.token;
-
-      let response = await this.fetch(url, init());
-
-      if (response.status === 401 && this.credentials && retryOnUnauthorized) {
-        if (this.token === tokenAtStart) {
-          await this.refreshSession(signal);
-        }
-
-        response = await this.fetch(url, init());
-      }
+      const response = await this.fetchWithRetry(url, init, signal, retryOnUnauthorized);
 
       statusCode = response.status;
       const result = await parse(response, { url, method });
@@ -365,6 +425,27 @@ export class ArgoCdClient {
       throw error;
     }
   }
+
+  private async fetchWithRetry(
+    url: string,
+    init: () => RequestInit,
+    signal?: AbortSignal,
+    retryOnUnauthorized = true,
+  ): Promise<Response> {
+    const tokenAtStart = this.token;
+
+    let response = await this.fetch(url, init());
+
+    if (response.status === 401 && this.credentials && retryOnUnauthorized) {
+      if (this.token === tokenAtStart) {
+        await this.refreshSession(signal);
+      }
+
+      response = await this.fetch(url, init());
+    }
+
+    return response;
+  }
 }
 
 interface RequestContext {
@@ -380,12 +461,13 @@ async function parseJsonResponse<T>(response: Response, context: RequestContext)
   return (await response.json()) as T;
 }
 
-async function parseNdJsonResponse<T>(response: Response, context: RequestContext): Promise<T[]> {
+async function* parseNdJsonStreamResponse<T>(
+  response: Response,
+  context: RequestContext,
+): AsyncGenerator<T> {
   if (!response.ok) {
     throw await createApiError(response, context);
   }
-
-  const results: T[] = [];
 
   for await (const line of readLines(response)) {
     if (!line) {
@@ -395,11 +477,9 @@ async function parseNdJsonResponse<T>(response: Response, context: RequestContex
     const parsed = JSON.parse(line) as { result?: T; error?: unknown };
 
     if (!parsed.error && parsed.result) {
-      results.push(parsed.result);
+      yield parsed.result;
     }
   }
-
-  return results;
 }
 
 async function* readLines(response: Response): AsyncGenerator<string> {
@@ -415,22 +495,33 @@ async function* readLines(response: Response): AsyncGenerator<string> {
   const decoder = new TextDecoder();
 
   let pending = '';
+  let completed = false;
 
-  while (true) {
-    const { done, value } = await reader.read();
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
 
-    pending += decoder.decode(value, { stream: !done });
-    const lines = pending.split('\n');
+      pending += decoder.decode(value, { stream: !done });
+      const lines = pending.split('\n');
 
-    pending = lines.pop()!;
+      pending = lines.pop()!;
 
-    for (const line of lines) {
-      yield line;
+      for (const line of lines) {
+        yield line;
+      }
+
+      if (done) {
+        completed = true;
+
+        break;
+      }
+    }
+  } finally {
+    if (!completed) {
+      await reader.cancel();
     }
 
-    if (done) {
-      break;
-    }
+    reader.releaseLock();
   }
 
   if (pending) {

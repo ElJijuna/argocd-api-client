@@ -20,8 +20,7 @@ export type BodyRequestFn = <T>(path: string, body?: unknown, signal?: AbortSign
 export type EmptyBodyRequestFn = <T>(path: string, signal?: AbortSignal) => Promise<T>;
 
 /** @internal */
-export type NdJsonRequestFn = <T>(
-  path: string,
-  params?: QueryParams,
-  signal?: AbortSignal,
-) => Promise<T[]>;
+export interface NdJsonRequestFn {
+  <T>(path: string, params?: QueryParams, signal?: AbortSignal): Promise<T[]>;
+  stream<T>(path: string, params?: QueryParams, signal?: AbortSignal): AsyncIterable<T>;
+}

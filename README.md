@@ -87,6 +87,14 @@ const managed = await argocd.applications.managedResources('guestbook');
 const logs = await argocd.applications.logs('guestbook', { container: 'main', tailLines: 100 });
 // logs → ArgoCdLogEntry[]  (streamed NDJSON, returned as an array)
 
+// Consume logs incrementally without buffering the full response
+for await (const entry of argocd.applications.logsStream('guestbook', {
+  container: 'main',
+  follow: true,
+})) {
+  console.log(entry.content);
+}
+
 // Convenience methods
 await argocd.applications.images('guestbook');
 // → string[]  unique container images across all resources
@@ -354,6 +362,17 @@ await argocd.refreshSession();
 ```
 
 Clients created with `new ArgoCdClient({ token })` do not store credentials; calling `refreshSession()` on them throws an error.
+
+Local session state can be managed without a server request:
+
+```typescript
+argocd.setToken(nextToken); // keeps stored refresh credentials
+argocd.hasCredentials(); // true for clients created with fromCredentials
+argocd.clearSession(); // clears both local token and credentials
+```
+
+`deleteSession()` invalidates the server session but retains local state for backward compatibility.
+Call `clearSession()` afterward when the client must forget its credentials.
 
 ### Express + createSession
 
