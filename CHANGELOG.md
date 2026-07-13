@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.5.0...v1.6.0) (2026-07-13)
+
+
+### Features
+
+* add llms.txt documentation and update scripts for generation and validation ([ca027e1](https://github.com/ElJijuna/argocd-api-client/commit/ca027e1b2f1784684ac1fb2181df51b8f594cc2f))
+
 # [1.5.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.4.0...v1.5.0) (2026-07-12)
 
 
