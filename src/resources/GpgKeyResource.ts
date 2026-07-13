@@ -19,7 +19,8 @@ export class GpgKeyResource {
    * Imports one or more GPG public keys.
    *
    * @param key - Key object containing at minimum `keyData` (ASCII-armored PGP block).
-   * @param upsert - When true, replaces an existing key with the same ID.
+   * @param params - Optional import behavior.
+   * @param params.upsert - When true, replaces an existing key with the same ID.
    */
   async create(
     key: ArgoCdGpgKey,

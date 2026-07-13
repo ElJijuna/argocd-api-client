@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsup",
     "check": "npm run lint && npm test",
-    "docs": "typedoc",
+    "docs": "typedoc && node scripts/copy-llms.mjs",
     "docs:check": "node scripts/check-architecture.mjs",
     "format": "biome format --write .",
     "format:check": "biome format .",

@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises';
 
-const [architecture, client, readme] = await Promise.all([
+const [architecture, client, readme, llms] = await Promise.all([
   readFile(new URL('../ARCHITECTURE.md', import.meta.url), 'utf8'),
   readFile(new URL('../src/ArgoCdClient.ts', import.meta.url), 'utf8'),
   readFile(new URL('../README.md', import.meta.url), 'utf8'),
+  readFile(new URL('../llms.txt', import.meta.url), 'utf8'),
 ]);
 const resources = [...client.matchAll(/readonly (\w+): \w+Resource;/g)].map((match) => match[1]);
 const missing = resources.filter((resource) => !architecture.includes(`\`${resource}\``));
@@ -20,9 +21,24 @@ if (!readme.includes('[Architecture](ARCHITECTURE.md)')) {
   throw new Error('README.md must link to ARCHITECTURE.md.');
 }
 
+if (!llms.startsWith('# argocd-api-client\n')) {
+  throw new Error('llms.txt must start with the package name as its H1.');
+}
+
+for (const requiredUrl of [
+  'https://eljijuna.github.io/argocd-api-client/',
+  'https://github.com/ElJijuna/argocd-api-client/blob/main/README.md',
+  'https://github.com/ElJijuna/argocd-api-client/blob/main/ARCHITECTURE.md',
+]) {
+  if (!llms.includes(requiredUrl)) {
+    throw new Error(`llms.txt is missing required URL: ${requiredUrl}`);
+  }
+}
+
 for (const [name, content] of [
   ['ARCHITECTURE.md', architecture],
   ['README.md', readme],
+  ['llms.txt', llms],
 ]) {
   if (!content.startsWith('# ')) {
     throw new Error(`${name} must start with one H1 heading.`);

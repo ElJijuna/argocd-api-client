@@ -1,0 +1,21 @@
+# argocd-api-client
+
+> Dependency-free TypeScript client for the Argo CD REST API. Supports Node.js 18+ and modern browsers through a fetch-compatible transport.
+
+Use `ArgoCdClient` as the main entry point. API services are exposed as typed resources for applications, ApplicationSets, projects, repositories, repository credentials, clusters, accounts, certificates, GPG keys, settings, and server version. The client supports bearer tokens, credential-based login, automatic session refresh, abort signals, request events, structured API errors, and incremental application log streaming.
+
+## Documentation
+
+- [API Reference](https://eljijuna.github.io/argocd-api-client/): Generated TypeDoc reference for all public classes, methods, and types.
+- [README](https://github.com/ElJijuna/argocd-api-client/blob/main/README.md): Installation, authentication, examples, and supported resources.
+- [Architecture](https://github.com/ElJijuna/argocd-api-client/blob/main/ARCHITECTURE.md): Runtime layers, request lifecycle, authentication ownership, and error boundaries.
+- [Roadmap](https://github.com/ElJijuna/argocd-api-client/blob/main/ROADMAP.md): Argo CD endpoint coverage and planned scope.
+- [Source](https://github.com/ElJijuna/argocd-api-client): Package source, issues, and releases.
+
+## Key APIs
+
+- `new ArgoCdClient({ baseUrl, token })` creates a token-authenticated client.
+- `ArgoCdClient.fromCredentials(...)` logs in and enables automatic refresh after a 401 response.
+- `client.applications.logsStream(...)` exposes application logs as a lazy `AsyncIterable`.
+- `client.on('request', listener)` observes completed logical requests.
+- `ArgoCdApiError` exposes HTTP status, response body, URL, method, and request ID.
