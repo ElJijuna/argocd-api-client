@@ -1036,8 +1036,8 @@ describe('ArgoCdClient', () => {
       mockJson({ items: [{ title: 'Grafana', url: 'https://grafana.example.com' }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const selector = { kind: 'Deployment', resourceName: 'api', namespace: 'default' };
-
       const actions = await client.applications.resourceActions('guestbook', selector);
+
       await client.applications.runResourceAction('guestbook', {
         ...selector,
         action: 'restart',
@@ -1060,10 +1060,10 @@ describe('ArgoCdClient', () => {
       mockJson({});
       mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
-
       const chart = await client.applications.chartDetails('guestbook', 'release/v2', {
         sourceIndex: 1,
       });
+
       await client.applications.terminateOperation('guestbook', { project: 'default' });
       await client.applications.terminateOperation('guestbook');
 
@@ -1075,7 +1075,10 @@ describe('ArgoCdClient', () => {
     });
 
     it('supports default parameters for new application read and resource methods', async () => {
-      for (let index = 0; index < 7; index += 1) mockJson({});
+      for (let index = 0; index < 7; index += 1) {
+        mockJson({});
+      }
+
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
 
       await client.applications.manifests('guestbook');
@@ -1125,6 +1128,7 @@ describe('ArgoCdClient', () => {
           },
         },
       };
+
       before.insights.images = ['old:v1', 'old:v1'];
       before.insights.warnings = [
         { code: 'MISSING_CPU_LIMIT', severity: 'warning', message: 'old' },
@@ -1237,12 +1241,16 @@ describe('ArgoCdClient', () => {
         },
         { metadata: { name: 'b' }, status: {} },
       ];
+
       mockJson({ items });
       mockJson({ items });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const iterated = [];
 
-      for await (const application of client.applications.iterate()) iterated.push(application);
+      for await (const application of client.applications.iterate()) {
+        iterated.push(application);
+      }
+
       const fleet = await client.applications.fleetSummary();
 
       expect(iterated).toHaveLength(2);
@@ -1268,12 +1276,12 @@ describe('ArgoCdClient', () => {
       mockJson({ items: [{ metadata: {} }] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const controller = new AbortController();
-      const iterator = client.applications
-        .watch(undefined, controller.signal)
-        [Symbol.asyncIterator]();
+      const stream = client.applications.watch(undefined, controller.signal);
+      const iterator = stream[Symbol.asyncIterator]();
 
       await expect(iterator.next()).resolves.toMatchObject({ done: false });
       const pending = iterator.next();
+
       controller.abort(new Error('stop'));
       await expect(pending).rejects.toThrow('stop');
     });
@@ -1294,10 +1302,13 @@ describe('ArgoCdClient', () => {
     it('handles an abort racing with polling listener registration', async () => {
       mockJson({ items: [] });
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
       let checks = 0;
+
       const signal = {
         get aborted() {
           checks += 1;
+
           return checks > 1;
         },
       } as AbortSignal;

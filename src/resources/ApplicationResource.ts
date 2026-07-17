@@ -58,7 +58,9 @@ function appendQuery(path: string, params: Record<string, unknown>): string {
   const query = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue;
+    if (value === undefined) {
+      continue;
+    }
 
     query.set(key, String(value));
   }
@@ -76,8 +78,11 @@ function waitForPoll(delayMs: number, signal?: AbortSignal): Promise<void> {
       reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
     };
 
-    if (signal?.aborted) abort();
-    else signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) {
+      abort();
+    } else {
+      signal?.addEventListener('abort', abort, { once: true });
+    }
   });
 }
 
@@ -270,7 +275,9 @@ export class ApplicationResource {
   ): Promise<ArgoCdSyncManyResult[]> {
     const concurrency = Math.max(1, Math.floor(options.concurrency ?? 4));
     const results = new Array<ArgoCdSyncManyResult>(names.length);
+
     let next = 0;
+
     const worker = async () => {
       while (next < names.length) {
         const index = next++;
@@ -279,7 +286,10 @@ export class ApplicationResource {
         try {
           let application = await this.sync(name, options.sync, signal);
 
-          if (options.wait) application = await this.wait(name, options.waitFor, signal);
+          if (options.wait) {
+            application = await this.wait(name, options.waitFor, signal);
+          }
+
           results[index] = { name, status: 'fulfilled', application };
         } catch (error) {
           results[index] = {
@@ -303,7 +313,9 @@ export class ApplicationResource {
   ): AsyncIterable<ArgoCdApplication> {
     const response = await this.list(params, signal);
 
-    for (const application of response.items) yield application;
+    for (const application of response.items) {
+      yield application;
+    }
   }
 
   /** Polls Argo CD and yields applications whose resourceVersion changed. */
@@ -313,6 +325,7 @@ export class ApplicationResource {
   ): AsyncIterable<ArgoCdApplication> {
     const { intervalMs = 5_000, emitInitial = true, ...listParams } = params;
     const versions = new Map<string, string | undefined>();
+
     let initial = true;
 
     while (!signal?.aborted) {
@@ -325,6 +338,7 @@ export class ApplicationResource {
         if ((initial && emitInitial) || (!initial && versions.get(key) !== version)) {
           yield application;
         }
+
         versions.set(key, version);
       }
 
@@ -349,6 +363,7 @@ export class ApplicationResource {
       ] ?? 'Unknown') as string;
       const syncValue = ((status?.['sync'] as Record<string, unknown> | undefined)?.['status'] ??
         'Unknown') as string;
+
       health[healthValue] = (health[healthValue] ?? 0) + 1;
       sync[syncValue] = (sync[syncValue] ?? 0) + 1;
     }
