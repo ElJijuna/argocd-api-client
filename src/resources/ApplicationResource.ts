@@ -5,9 +5,14 @@ import type {
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
   ArgoCdApplicationLogsParams,
+  ArgoCdApplicationManifests,
+  ArgoCdApplicationManifestsParams,
+  ArgoCdApplicationResourceManifest,
+  ArgoCdApplicationResourceParams,
   ArgoCdApplicationResourceAllocation,
   ArgoCdApplicationWaitRequest,
   ArgoCdContainer,
+  ArgoCdChartDetails,
   ArgoCdDeleteResourceParams,
   ArgoCdEvent,
   ArgoCdEventsParams,
@@ -18,11 +23,16 @@ import type {
   ArgoCdNode,
   ArgoCdPod,
   ArgoCdPodsParams,
+  ArgoCdPatchApplicationResourceParams,
   ArgoCdResourceQuantities,
+  ArgoCdResourceActions,
+  ArgoCdResourceLinks,
   ArgoCdResourceRequirements,
   ArgoCdResourceTree,
   ArgoCdRevisionMetadata,
   ArgoCdRevisionMetadataParams,
+  ArgoCdRevisionSourceParams,
+  ArgoCdRunResourceActionRequest,
 } from '../domain/application';
 import {
   allLimitsCovered,
@@ -30,6 +40,20 @@ import {
   sumNormalizedResources,
 } from './resourceAllocation';
 import type { BodyRequestFn, EmptyBodyRequestFn, NdJsonRequestFn, RequestFn } from './types';
+
+function appendQuery(path: string, params: Record<string, unknown>): string {
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+
+    query.set(key, String(value));
+  }
+
+  const encoded = query.toString();
+
+  return encoded ? `${path}?${encoded}` : path;
+}
 
 /**
  * Methods for Argo CD applications.
@@ -267,6 +291,22 @@ export class ApplicationResource {
   }
 
   /**
+   * Renders desired application manifests through Argo CD without applying them.
+   * Supports single-source revisions and paired multi-source `sourcePositions` / `revisions`.
+   */
+  async manifests(
+    name: string,
+    params: ArgoCdApplicationManifestsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationManifests> {
+    return this.request<ArgoCdApplicationManifests>(
+      `/api/v1/applications/${encodeURIComponent(name)}/manifests`,
+      params,
+      signal,
+    );
+  }
+
+  /**
    * Streams pod logs as they arrive from Argo CD without buffering the full response.
    * Iteration is lazy: the HTTP request starts when the iterable is consumed.
    *
@@ -346,6 +386,73 @@ export class ApplicationResource {
     );
 
     return res.items ?? [];
+  }
+
+  /** Returns one live Kubernetes manifest managed by an application. */
+  async getResource(
+    name: string,
+    params: ArgoCdApplicationResourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationResourceManifest> {
+    return this.request<ArgoCdApplicationResourceManifest>(
+      `/api/v1/applications/${encodeURIComponent(name)}/resource`,
+      params,
+      signal,
+    );
+  }
+
+  /**
+   * Patches one live Kubernetes resource. `patch` must be the JSON-encoded patch string expected by
+   * Argo CD; `patchType` selects merge, strategic merge, or JSON patch semantics.
+   */
+  async patchResource(
+    name: string,
+    patch: string,
+    params: ArgoCdPatchApplicationResourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationResourceManifest> {
+    const path = appendQuery(`/api/v1/applications/${encodeURIComponent(name)}/resource`, params);
+
+    return this.post<ArgoCdApplicationResourceManifest>(path, patch, signal);
+  }
+
+  /** Lists built-in and custom actions available for one live resource. */
+  async resourceActions(
+    name: string,
+    params: ArgoCdApplicationResourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdResourceActions> {
+    return this.request<ArgoCdResourceActions>(
+      `/api/v1/applications/${encodeURIComponent(name)}/resource/actions`,
+      params,
+      signal,
+    );
+  }
+
+  /** Runs a parameter-aware resource action through Argo CD's V2 action endpoint. */
+  async runResourceAction(
+    name: string,
+    action: ArgoCdRunResourceActionRequest,
+    signal?: AbortSignal,
+  ): Promise<Record<string, never>> {
+    return this.post<Record<string, never>>(
+      `/api/v1/applications/${encodeURIComponent(name)}/resource/actions/v2`,
+      { ...action, name },
+      signal,
+    );
+  }
+
+  /** Returns configured deep links (for example dashboards or logs) for one live resource. */
+  async resourceLinks(
+    name: string,
+    params: ArgoCdApplicationResourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdResourceLinks> {
+    return this.request<ArgoCdResourceLinks>(
+      `/api/v1/applications/${encodeURIComponent(name)}/resource/links`,
+      params,
+      signal,
+    );
   }
 
   /**
@@ -695,12 +802,37 @@ export class ApplicationResource {
     );
   }
 
+  /** Returns Helm chart metadata for one application revision/source. */
+  async chartDetails(
+    name: string,
+    revision: string,
+    params: ArgoCdRevisionSourceParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdChartDetails> {
+    return this.request<ArgoCdChartDetails>(
+      `/api/v1/applications/${encodeURIComponent(name)}/revisions/${encodeURIComponent(revision)}/chartdetails`,
+      params,
+      signal,
+    );
+  }
+
   /** Terminates a running sync operation for an application. */
   async terminateSync(name: string, signal?: AbortSignal): Promise<Record<string, never>> {
     return this.deleteRequest<Record<string, never>>(
       `/api/v1/applications/${encodeURIComponent(name)}/sync`,
       signal,
     );
+  }
+
+  /** Terminates the currently running application operation using the current Argo CD endpoint. */
+  async terminateOperation(
+    name: string,
+    params: { appNamespace?: string; project?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<Record<string, never>> {
+    const path = appendQuery(`/api/v1/applications/${encodeURIComponent(name)}/operation`, params);
+
+    return this.deleteRequest<Record<string, never>>(path, signal);
   }
 
   /**

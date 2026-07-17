@@ -17,6 +17,8 @@ Use `ArgoCdClient` as the main entry point. API services are exposed as typed re
 - `new ArgoCdClient({ baseUrl, token })` creates a token-authenticated client.
 - `ArgoCdClient.fromCredentials(...)` logs in and enables automatic refresh after a 401 response.
 - `client.applications.logsStream(...)` exposes application logs as a lazy `AsyncIterable`.
+- `client.applications.manifests(...)` renders desired manifests, including multi-source revisions.
+- `client.applications.getResource(...)`, `patchResource(...)`, `resourceActions(...)`, `runResourceAction(...)`, and `resourceLinks(...)` expose live-resource operations and customizations.
 - `client.applications.resourceAllocation(...)` calculates declared CPU, memory, and ephemeral-storage allocation from live Pods, grouped by Pod and node.
 - `client.on('request', listener)` observes completed logical requests.
 - `ArgoCdApiError` exposes HTTP status, response body, URL, method, and request ID.

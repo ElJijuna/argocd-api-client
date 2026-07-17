@@ -71,6 +71,123 @@ export interface ArgoCdApplicationLogsParams extends QueryParams {
   appNamespace?: string;
 }
 
+/** Query parameters for rendering an application's desired manifests. */
+export interface ArgoCdApplicationManifestsParams extends QueryParams {
+  /** Render one revision for a single-source application. */
+  revision?: string;
+  /** Application namespace for multi-namespace Argo CD installations. */
+  appNamespace?: string;
+  /** Project used for authorization checks. */
+  project?: string;
+  /** One-based source positions for a multi-source application. */
+  sourcePositions?: number[];
+  /** Revisions corresponding to `sourcePositions`. */
+  revisions?: string[];
+  /** Bypass Argo CD's manifest cache. */
+  noCache?: boolean;
+}
+
+/** Integrity check returned while rendering application manifests. */
+export interface ArgoCdManifestIntegrityCheck {
+  name?: string;
+  problems?: string[];
+}
+
+/** Rendered desired manifests and source metadata returned by Argo CD. */
+export interface ArgoCdApplicationManifests {
+  commands?: string[];
+  manifests?: string[];
+  namespace?: string;
+  revision?: string;
+  server?: string;
+  sourceType?: string;
+  verifyResult?: string;
+  sourceIntegrityResult?: { checks?: ArgoCdManifestIntegrityCheck[] };
+}
+
+/** Selector shared by live-resource, action, and deep-link endpoints. */
+export interface ArgoCdApplicationResourceParams extends QueryParams {
+  namespace?: string;
+  resourceName?: string;
+  version?: string;
+  group?: string;
+  kind?: string;
+  appNamespace?: string;
+  project?: string;
+}
+
+/** Live Kubernetes manifest returned for one application resource. */
+export interface ArgoCdApplicationResourceManifest {
+  manifest?: string;
+}
+
+/** Parameters for patching one live application resource. */
+export interface ArgoCdPatchApplicationResourceParams extends ArgoCdApplicationResourceParams {
+  /** Kubernetes patch media type, for example `application/merge-patch+json`. */
+  patchType?: string;
+}
+
+/** Parameter accepted by an Argo CD resource action. */
+export interface ArgoCdResourceActionParameter {
+  name?: string;
+  value?: string;
+}
+
+/** Resource action exposed by Argo CD. */
+export interface ArgoCdResourceAction {
+  disabled?: boolean;
+  displayName?: string;
+  iconClass?: string;
+  name?: string;
+  params?: ArgoCdResourceActionParameter[];
+}
+
+/** Available resource actions response. */
+export interface ArgoCdResourceActions {
+  actions?: ArgoCdResourceAction[];
+}
+
+/** Request for the parameter-aware resource action V2 endpoint. */
+export interface ArgoCdRunResourceActionRequest {
+  action: string;
+  namespace?: string;
+  resourceName?: string;
+  version?: string;
+  group?: string;
+  kind?: string;
+  appNamespace?: string;
+  project?: string;
+  resourceActionParameters?: ArgoCdResourceActionParameter[];
+}
+
+/** Deep link associated with one live application resource. */
+export interface ArgoCdResourceLink {
+  description?: string;
+  iconClass?: string;
+  title?: string;
+  url?: string;
+}
+
+/** Resource deep links response. */
+export interface ArgoCdResourceLinks {
+  items?: ArgoCdResourceLink[];
+}
+
+/** Parameters selecting one source from a multi-source revision. */
+export interface ArgoCdRevisionSourceParams extends QueryParams {
+  appNamespace?: string;
+  project?: string;
+  sourceIndex?: number;
+  versionId?: number;
+}
+
+/** Helm chart metadata returned for an application revision. */
+export interface ArgoCdChartDetails {
+  description?: string;
+  home?: string;
+  maintainers?: string[];
+}
+
 /** A single log entry returned by the application logs endpoint. */
 export interface ArgoCdLogEntry {
   /** Log line content. */

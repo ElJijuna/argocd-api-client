@@ -84,6 +84,7 @@ await argocd.applications.deleteByName('guestbook');
 // Application observability
 const tree = await argocd.applications.resourceTree('guestbook');
 const managed = await argocd.applications.managedResources('guestbook');
+const desired = await argocd.applications.manifests('guestbook', { revision: 'main' });
 const logs = await argocd.applications.logs('guestbook', { container: 'main', tailLines: 100 });
 // logs → ArgoCdLogEntry[]  (streamed NDJSON, returned as an array)
 
@@ -122,6 +123,26 @@ await argocd.applications.diff('guestbook');
 
 await argocd.applications.events('guestbook');
 // → ArgoCdEvent[]  Kubernetes events for the application or a specific resource
+
+// Live-resource operations and Argo CD resource customizations
+await argocd.applications.getResource('guestbook', {
+  group: 'apps',
+  version: 'v1',
+  kind: 'Deployment',
+  namespace: 'default',
+  resourceName: 'api',
+});
+await argocd.applications.resourceActions('guestbook', {
+  kind: 'Deployment',
+  namespace: 'default',
+  resourceName: 'api',
+});
+await argocd.applications.runResourceAction('guestbook', {
+  action: 'restart',
+  kind: 'Deployment',
+  namespace: 'default',
+  resourceName: 'api',
+});
 
 // ApplicationSets
 await argocd.applicationSets.list();
@@ -512,7 +533,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `revisionMetadata` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `terminateOperation` · `wait` · `rollback` · `deleteByName` · `getResource` · `patchResource` · `deleteResource` · `resourceActions` · `runResourceAction` · `resourceLinks` · `refresh` · `manifests` · `revisionMetadata` · `chartDetails` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `apps` · `deleteByRepo` |

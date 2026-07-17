@@ -983,6 +983,111 @@ describe('ArgoCdClient', () => {
       expect(resources).toEqual([]);
     });
 
+    it('renders manifests for paired multi-source revisions', async () => {
+      mockJson({ manifests: ['apiVersion: v1'], revision: 'abc123', sourceType: 'Helm' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const result = await client.applications.manifests('guest/book', {
+        sourcePositions: [1, 2],
+        revisions: ['v1', 'v2'],
+        noCache: true,
+      });
+      const url = new URL(mockFetch.mock.calls[0][0] as string);
+
+      expect(url.pathname).toBe('/api/v1/applications/guest%2Fbook/manifests');
+      expect(url.searchParams.getAll('sourcePositions')).toEqual(['1', '2']);
+      expect(url.searchParams.getAll('revisions')).toEqual(['v1', 'v2']);
+      expect(url.searchParams.get('noCache')).toBe('true');
+      expect(result.sourceType).toBe('Helm');
+    });
+
+    it('gets and patches one live resource', async () => {
+      mockJson({ manifest: '{"kind":"Deployment"}' });
+      mockJson({ manifest: '{"kind":"Deployment","spec":{"replicas":2}}' });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const selector = {
+        group: 'apps',
+        version: 'v1',
+        kind: 'Deployment',
+        namespace: 'default',
+        resourceName: 'api',
+      };
+
+      await client.applications.getResource('guestbook', selector);
+      await client.applications.patchResource('guestbook', '{"spec":{"replicas":2}}', {
+        ...selector,
+        patchType: 'application/merge-patch+json',
+        project: undefined,
+      });
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/applications/guestbook/resource?');
+      const patchUrl = new URL(mockFetch.mock.calls[1][0] as string);
+
+      expect(patchUrl.searchParams.get('patchType')).toBe('application/merge-patch+json');
+      expect(patchUrl.searchParams.has('project')).toBe(false);
+      expect(mockFetch.mock.calls[1][1]).toMatchObject({
+        method: 'POST',
+        body: JSON.stringify('{"spec":{"replicas":2}}'),
+      });
+    });
+
+    it('lists, runs, and links resource actions through V2', async () => {
+      mockJson({ actions: [{ name: 'restart', disabled: false }] });
+      mockJson({});
+      mockJson({ items: [{ title: 'Grafana', url: 'https://grafana.example.com' }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const selector = { kind: 'Deployment', resourceName: 'api', namespace: 'default' };
+
+      const actions = await client.applications.resourceActions('guestbook', selector);
+      await client.applications.runResourceAction('guestbook', {
+        ...selector,
+        action: 'restart',
+        resourceActionParameters: [{ name: 'gracePeriod', value: '10' }],
+      });
+      const links = await client.applications.resourceLinks('guestbook', selector);
+
+      expect(actions.actions?.[0].name).toBe('restart');
+      expect(mockFetch.mock.calls[1][0]).toContain('/resource/actions/v2');
+      expect(JSON.parse(mockFetch.mock.calls[1][1].body)).toMatchObject({
+        name: 'guestbook',
+        action: 'restart',
+        resourceName: 'api',
+      });
+      expect(links.items?.[0].title).toBe('Grafana');
+    });
+
+    it('returns chart details and terminates the current operation', async () => {
+      mockJson({ description: 'Guestbook chart', maintainers: ['Platform'] });
+      mockJson({});
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      const chart = await client.applications.chartDetails('guestbook', 'release/v2', {
+        sourceIndex: 1,
+      });
+      await client.applications.terminateOperation('guestbook', { project: 'default' });
+      await client.applications.terminateOperation('guestbook');
+
+      expect(chart.description).toBe('Guestbook chart');
+      expect(mockFetch.mock.calls[0][0]).toContain('/revisions/release%2Fv2/chartdetails');
+      expect(mockFetch.mock.calls[1][0]).toContain('/operation?project=default');
+      expect(mockFetch.mock.calls[2][0]).toMatch(/\/operation$/);
+      expect(mockFetch.mock.calls[2][1]).toMatchObject({ method: 'DELETE' });
+    });
+
+    it('supports default parameters for new application read and resource methods', async () => {
+      for (let index = 0; index < 6; index += 1) mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+
+      await client.applications.manifests('guestbook');
+      await client.applications.getResource('guestbook');
+      await client.applications.patchResource('guestbook', '{}');
+      await client.applications.resourceActions('guestbook');
+      await client.applications.resourceLinks('guestbook');
+      await client.applications.chartDetails('guestbook', 'HEAD');
+
+      expect(mockFetch).toHaveBeenCalledTimes(6);
+    });
+
     it('parses NDJSON logs and returns log entries', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

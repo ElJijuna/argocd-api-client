@@ -22,12 +22,20 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/logs` | ✅ |
 | `GET` | `/applications/{name}/resource-tree` | ✅ |
 | `GET` | `/applications/{name}/managed-resources` | ✅ |
+| `GET` | `/applications/{name}/manifests` | ✅ `manifests()` |
+| `GET` | `/applications/{name}/resource` | ✅ `getResource()` |
+| `POST` | `/applications/{name}/resource` | ✅ `patchResource()` |
 | `DELETE` | `/applications/{name}/resource` | ✅ `deleteResource()` |
+| `GET` | `/applications/{name}/resource/actions` | ✅ `resourceActions()` |
+| `POST` | `/applications/{name}/resource/actions/v2` | ✅ `runResourceAction()` |
+| `GET` | `/applications/{name}/resource/links` | ✅ `resourceLinks()` |
 | `POST` | `/applications/{name}/rollback` | ✅ |
 | `GET` | `/applications/{name}/refresh` | ✅ `refresh()` |
 | `GET` | `/applications/{name}/events` | ✅ `events()` |
 | `POST` | `/applications/{name}/wait` | ✅ `wait()` |
 | `GET` | `/applications/{name}/revisions/{revision}/metadata` | ✅ `revisionMetadata()` |
+| `GET` | `/applications/{name}/revisions/{revision}/chartdetails` | ✅ `chartDetails()` |
+| `DELETE` | `/applications/{name}/operation` | ✅ `terminateOperation()` |
 
 ### ProjectService
 | Method | Endpoint | Status |
