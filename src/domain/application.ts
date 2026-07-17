@@ -179,6 +179,94 @@ export interface ArgoCdApplicationHealth {
   message?: string;
 }
 
+/** Kubernetes resource quantities exactly as returned by the Pod manifest. */
+export type ArgoCdResourceQuantities = Record<string, string>;
+
+/** Resource requests and limits declared for a container or Pod. */
+export interface ArgoCdResourceRequirements {
+  /** Resources reserved by the Kubernetes scheduler. */
+  requests?: ArgoCdResourceQuantities;
+  /** Maximum resources the workload may consume. */
+  limits?: ArgoCdResourceQuantities;
+}
+
+/** CPU, memory, and ephemeral storage normalized for arithmetic. */
+export interface ArgoCdNormalizedResources {
+  /** CPU in millicores. */
+  cpuMillicores: number;
+  /** Memory in bytes. */
+  memoryBytes: number;
+  /** Ephemeral storage in bytes. */
+  ephemeralStorageBytes: number;
+}
+
+/** Whether every effective container contributing to a resource declares a limit. */
+export interface ArgoCdResourceLimitCoverage {
+  cpu: boolean;
+  memory: boolean;
+  ephemeralStorage: boolean;
+}
+
+/** Effective scheduler requests and declared limits for one live Pod. */
+export interface ArgoCdPodResourceAllocation {
+  /** Pod name. */
+  name?: string;
+  /** Pod namespace. */
+  namespace?: string;
+  /** Node currently hosting the Pod. */
+  nodeName?: string;
+  /** Current Pod phase. */
+  phase?: string;
+  /** Effective request used for scheduling, including init containers and Pod overhead. */
+  requests: ArgoCdNormalizedResources;
+  /** Effective declared limit, including init containers and Pod overhead. */
+  limits: ArgoCdNormalizedResources;
+  /** False means the corresponding effective limit is unbounded despite the numeric declared sum. */
+  limitsFullySpecified: ArgoCdResourceLimitCoverage;
+  /** Raw Pod overhead quantities, when a RuntimeClass added them. */
+  overhead?: ArgoCdResourceQuantities;
+  /** Raw Pod-level resources. These override container totals when present. */
+  podResources?: ArgoCdResourceRequirements;
+  /** Regular containers with their raw resource declarations. */
+  containers: ArgoCdContainer[];
+  /** Init containers with their raw resource declarations. */
+  initContainers?: ArgoCdContainer[];
+}
+
+/** Aggregated allocation for application Pods scheduled on one node. */
+export interface ArgoCdNodeResourceAllocation {
+  /** Node name, or undefined for unscheduled Pods. */
+  nodeName?: string;
+  /** Number of application Pods assigned to this group. */
+  podCount: number;
+  /** Sum of effective Pod scheduler requests. */
+  requests: ArgoCdNormalizedResources;
+  /** Sum of effective declared Pod limits. */
+  limits: ArgoCdNormalizedResources;
+  /** Whether every Pod in this node group declares each limit. */
+  limitsFullySpecified: ArgoCdResourceLimitCoverage;
+}
+
+/** Resource allocation derivable from an application's live Pods in Argo CD. */
+export interface ArgoCdApplicationResourceAllocation {
+  /** Number of live Pod manifests returned by Argo CD. */
+  podCount: number;
+  /** Number of regular containers across those Pods. */
+  containerCount: number;
+  /** Number of init containers, including restartable sidecars. */
+  initContainerCount: number;
+  /** Effective allocation per live Pod. */
+  pods: ArgoCdPodResourceAllocation[];
+  /** Effective allocation grouped by assigned node. */
+  nodes: ArgoCdNodeResourceAllocation[];
+  /** Sum of effective Pod scheduler requests. */
+  requests: ArgoCdNormalizedResources;
+  /** Sum of effective declared Pod limits. */
+  limits: ArgoCdNormalizedResources;
+  /** Whether every live Pod declares each limit. */
+  limitsFullySpecified: ArgoCdResourceLimitCoverage;
+}
+
 /** A single container within a pod. */
 export interface ArgoCdContainer {
   /** Container name. */
@@ -191,6 +279,10 @@ export interface ArgoCdContainer {
   restartCount?: number;
   /** Current container state (running, waiting, terminated). */
   state?: Record<string, unknown>;
+  /** Raw resource requests and limits from the live Pod manifest. */
+  resources?: ArgoCdResourceRequirements;
+  /** `Always` identifies a restartable init container (native sidecar). */
+  restartPolicy?: string;
   /** Name of the pod this container belongs to — set by containers(). */
   podName?: string;
 }
@@ -205,6 +297,10 @@ export interface ArgoCdPod {
   phase?: string;
   /** Name of the node the pod is scheduled on. */
   nodeName?: string;
+  /** Pod-level resources, available on clusters with PodLevelResources enabled. */
+  resources?: ArgoCdResourceRequirements;
+  /** RuntimeClass overhead added to effective requests and limits. */
+  overhead?: ArgoCdResourceQuantities;
   /** Regular containers in the pod. */
   containers: ArgoCdContainer[];
   /** Init containers in the pod. */

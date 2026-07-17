@@ -103,7 +103,13 @@ await argocd.applications.pods('guestbook');
 // → ArgoCdPod[]  live pods with phase, nodeName and container specs/status
 
 await argocd.applications.containers('guestbook');
-// → ArgoCdContainer[]  all containers flattened from every pod, each with podName
+// → ArgoCdContainer[]  all containers with podName and raw resources.requests/limits
+
+const allocation = await argocd.applications.resourceAllocation('guestbook');
+// → requests/limits normalized for CPU, memory and ephemeral storage
+// → totals per app, live Pod and assigned node
+// Requests follow scheduler rules for init containers, native sidecars, Pod overhead and
+// Pod-level resources. This is declared allocation, not current resource usage or cluster capacity.
 
 await argocd.applications.nodes('guestbook');
 // → ArgoCdNode[]  Kubernetes nodes hosting the app's pods (osImage, architecture, kernelVersion…)
@@ -506,7 +512,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `revisionMetadata` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `wait` · `rollback` · `deleteByName` · `deleteResource` · `refresh` · `revisionMetadata` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `apps` · `deleteByRepo` |

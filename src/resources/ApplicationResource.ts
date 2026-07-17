@@ -5,6 +5,7 @@ import type {
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
   ArgoCdApplicationLogsParams,
+  ArgoCdApplicationResourceAllocation,
   ArgoCdApplicationWaitRequest,
   ArgoCdContainer,
   ArgoCdDeleteResourceParams,
@@ -17,10 +18,17 @@ import type {
   ArgoCdNode,
   ArgoCdPod,
   ArgoCdPodsParams,
+  ArgoCdResourceQuantities,
+  ArgoCdResourceRequirements,
   ArgoCdResourceTree,
   ArgoCdRevisionMetadata,
   ArgoCdRevisionMetadataParams,
 } from '../domain/application';
+import {
+  allLimitsCovered,
+  calculatePodResourceAllocation,
+  sumNormalizedResources,
+} from './resourceAllocation';
 import type { BodyRequestFn, EmptyBodyRequestFn, NdJsonRequestFn, RequestFn } from './types';
 
 /**
@@ -414,7 +422,7 @@ export class ApplicationResource {
         const containerStatuses: Array<Record<string, unknown>> =
           manifest.status?.containerStatuses ?? [];
         const toContainer = (c: Record<string, unknown>): ArgoCdContainer => {
-          const { name, image } = c;
+          const { name, image, resources, restartPolicy } = c;
           const cs = containerStatuses.find(({ name: statusName }) => statusName === name) ?? {};
           const { ready, restartCount, state } = cs;
 
@@ -424,6 +432,8 @@ export class ApplicationResource {
             ready: ready as boolean | undefined,
             restartCount: restartCount as number | undefined,
             state: state as Record<string, unknown> | undefined,
+            resources: resources as ArgoCdResourceRequirements | undefined,
+            restartPolicy: restartPolicy as string | undefined,
           };
         };
 
@@ -432,6 +442,8 @@ export class ApplicationResource {
           namespace: manifest.metadata?.namespace,
           phase: manifest.status?.phase,
           nodeName: manifest.spec?.nodeName,
+          resources: manifest.spec?.resources as ArgoCdResourceRequirements | undefined,
+          overhead: manifest.spec?.overhead as ArgoCdResourceQuantities | undefined,
           containers: (manifest.spec?.containers ?? []).map(toContainer),
           initContainers: manifest.spec?.initContainers?.map(toContainer),
         };
@@ -466,6 +478,55 @@ export class ApplicationResource {
     const pods = await this.pods(name, params, signal);
 
     return pods.flatMap((pod) => pod.containers.map((c) => ({ ...c, podName: pod.name })));
+  }
+
+  /**
+   * Calculates resource allocation from live Pod manifests available through Argo CD.
+   * Requests follow Kubernetes scheduling rules for regular containers, init containers,
+   * restartable init sidecars, Pod-level resources, and RuntimeClass overhead. Results include
+   * CPU, memory, and ephemeral storage grouped by Pod and assigned node.
+   *
+   * This is declared allocation, not real-time usage. Cluster capacity and resources consumed by
+   * workloads outside this application are not available from the Argo CD application API.
+   *
+   * @param name - Application name.
+   * @param params - Optional Pod filters: `namespace`, `resourceName`, `appNamespace`.
+   * @param signal - Optional `AbortSignal` to cancel the request.
+   */
+  async resourceAllocation(
+    name: string,
+    params: ArgoCdPodsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationResourceAllocation> {
+    const pods = await this.pods(name, params, signal);
+    const allocations = pods.map(calculatePodResourceAllocation);
+    const grouped = new Map<string | undefined, typeof allocations>();
+
+    for (const allocation of allocations) {
+      const current = grouped.get(allocation.nodeName) ?? [];
+
+      current.push(allocation);
+      grouped.set(allocation.nodeName, current);
+    }
+
+    const nodes = [...grouped.entries()].map(([nodeName, nodePods]) => ({
+      nodeName,
+      podCount: nodePods.length,
+      requests: sumNormalizedResources(nodePods.map((pod) => pod.requests)),
+      limits: sumNormalizedResources(nodePods.map((pod) => pod.limits)),
+      limitsFullySpecified: allLimitsCovered(nodePods),
+    }));
+
+    return {
+      podCount: pods.length,
+      containerCount: pods.reduce((count, pod) => count + pod.containers.length, 0),
+      initContainerCount: pods.reduce((count, pod) => count + (pod.initContainers?.length ?? 0), 0),
+      pods: allocations,
+      nodes,
+      requests: sumNormalizedResources(allocations.map((pod) => pod.requests)),
+      limits: sumNormalizedResources(allocations.map((pod) => pod.limits)),
+      limitsFullySpecified: allLimitsCovered(allocations),
+    };
   }
 
   /**

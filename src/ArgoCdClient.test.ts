@@ -1050,7 +1050,16 @@ describe('ArgoCdClient', () => {
         metadata: { name: 'api-abc123', namespace: 'default' },
         spec: {
           nodeName: 'node-1',
-          containers: [{ name: 'api', image: 'my-app:v1' }],
+          containers: [
+            {
+              name: 'api',
+              image: 'my-app:v1',
+              resources: {
+                requests: { cpu: '250m', memory: '128Mi' },
+                limits: { cpu: '1', memory: '256Mi' },
+              },
+            },
+          ],
         },
         status: {
           phase: 'Running',
@@ -1078,6 +1087,10 @@ describe('ArgoCdClient', () => {
       expect(pods[0].containers[0].image).toBe('my-app:v1');
       expect(pods[0].containers[0].ready).toBe(true);
       expect(pods[0].containers[0].restartCount).toBe(2);
+      expect(pods[0].containers[0].resources).toEqual({
+        requests: { cpu: '250m', memory: '128Mi' },
+        limits: { cpu: '1', memory: '256Mi' },
+      });
     });
 
     it('skips managed resources without liveState when returning pods', async () => {
@@ -1109,6 +1122,144 @@ describe('ArgoCdClient', () => {
       expect(containers[0].podName).toBe('api-abc123');
       expect(containers[1].name).toBe('sidecar');
       expect(containers[1].podName).toBe('api-abc123');
+    });
+
+    it('calculates effective application allocation from live pods', async () => {
+      const pod = {
+        metadata: { name: 'api-abc123', namespace: 'default' },
+        spec: {
+          nodeName: 'node-1',
+          overhead: { cpu: '50m', memory: '8Mi' },
+          containers: [
+            {
+              name: 'api',
+              image: 'my-app:v1',
+              resources: {
+                requests: { cpu: '100m', memory: '128Mi', 'ephemeral-storage': '1Gi' },
+                limits: { cpu: '500m', memory: '256Mi', 'ephemeral-storage': '2Gi' },
+              },
+            },
+          ],
+          initContainers: [
+            {
+              name: 'logging-sidecar',
+              image: 'logging:v1',
+              restartPolicy: 'Always',
+              resources: {
+                requests: { cpu: '200m', memory: '32Mi' },
+                limits: { cpu: '300m', memory: '64Mi' },
+              },
+            },
+            {
+              name: 'migration',
+              image: 'migration:v1',
+              resources: {
+                requests: { cpu: '500m', memory: '64Mi' },
+                limits: { cpu: '1', memory: '128Mi' },
+              },
+            },
+          ],
+        },
+        status: { phase: 'Running', containerStatuses: [], initContainerStatuses: [] },
+      };
+
+      mockJson({ items: [{ kind: 'Pod', liveState: JSON.stringify(pod) }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const allocation = await client.applications.resourceAllocation('guestbook');
+
+      expect(allocation).toMatchObject({
+        podCount: 1,
+        containerCount: 1,
+        initContainerCount: 2,
+        requests: {
+          cpuMillicores: 750,
+          memoryBytes: 176160768,
+          ephemeralStorageBytes: 1073741824,
+        },
+        limits: {
+          cpuMillicores: 1350,
+          memoryBytes: 343932928,
+          ephemeralStorageBytes: 2147483648,
+        },
+        limitsFullySpecified: { cpu: true, memory: true, ephemeralStorage: false },
+        nodes: [{ nodeName: 'node-1', podCount: 1 }],
+      });
+      expect(allocation.pods[0].containers[0].resources?.requests?.cpu).toBe('100m');
+      expect(allocation.pods[0].initContainers?.[0].restartPolicy).toBe('Always');
+    });
+
+    it('uses Pod-level resources when Argo CD returns them in the live manifest', async () => {
+      const pod = {
+        metadata: { name: 'worker-1' },
+        spec: {
+          resources: {
+            requests: { cpu: '2', memory: '1Gi', 'ephemeral-storage': '5G' },
+            limits: { cpu: '3', memory: '2Gi', 'ephemeral-storage': '6G' },
+          },
+          containers: [
+            {
+              name: 'worker',
+              image: 'worker:v1',
+              resources: {
+                requests: { cpu: '100m', memory: '32Mi' },
+                limits: { cpu: '200m', memory: '64Mi' },
+              },
+            },
+          ],
+        },
+        status: { phase: 'Pending' },
+      };
+
+      mockJson({ items: [{ kind: 'Pod', liveState: JSON.stringify(pod) }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const allocation = await client.applications.resourceAllocation('workers');
+
+      expect(allocation.requests).toEqual({
+        cpuMillicores: 2000,
+        memoryBytes: 1073741824,
+        ephemeralStorageBytes: 5000000000,
+      });
+      expect(allocation.limits).toEqual({
+        cpuMillicores: 3000,
+        memoryBytes: 2147483648,
+        ephemeralStorageBytes: 6000000000,
+      });
+      expect(allocation.nodes).toEqual([
+        {
+          nodeName: undefined,
+          podCount: 1,
+          requests: allocation.requests,
+          limits: allocation.limits,
+          limitsFullySpecified: {
+            cpu: true,
+            memory: true,
+            ephemeralStorage: true,
+          },
+        },
+      ]);
+    });
+
+    it('normalizes an invalid quantity to zero while preserving its raw value', async () => {
+      const pod = {
+        metadata: { name: 'invalid-quantity' },
+        spec: {
+          containers: [
+            {
+              name: 'worker',
+              image: 'worker:v1',
+              resources: { requests: { cpu: 'invalid' } },
+            },
+          ],
+        },
+        status: { phase: 'Pending' },
+      };
+
+      mockJson({ items: [{ kind: 'Pod', liveState: JSON.stringify(pod) }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const allocation = await client.applications.resourceAllocation('workers');
+
+      expect(allocation.requests.cpuMillicores).toBe(0);
+      expect(allocation.pods[0].containers[0].resources?.requests?.cpu).toBe('invalid');
     });
 
     it('returns nodes with OS info from resource tree hosts', async () => {

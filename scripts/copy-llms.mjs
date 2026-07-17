@@ -1,8 +1,24 @@
-import { copyFile } from 'node:fs/promises';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 
-await copyFile(
-  new URL('../llms.txt', import.meta.url),
-  new URL('../docs/llms.txt', import.meta.url),
+const root = new URL('../', import.meta.url);
+const docs = new URL('../docs/', import.meta.url);
+
+await copyFile(new URL('llms.txt', root), new URL('llms.txt', docs));
+
+const fullSources = [
+  ['LLM index', 'llms.txt'],
+  ['README', 'README.md'],
+  ['Architecture', 'ARCHITECTURE.md'],
+  ['Roadmap', 'ROADMAP.md'],
+];
+const fullContents = await Promise.all(
+  fullSources.map(async ([title, path]) => {
+    const content = await readFile(new URL(path, root), 'utf8');
+
+    return `# ${title}\n\n${content.trim()}\n`;
+  }),
 );
 
-console.log('Copied llms.txt to generated documentation.');
+await writeFile(new URL('llms-full.txt', docs), fullContents.join('\n---\n\n'));
+
+console.log('Generated llms.txt and llms-full.txt documentation.');
