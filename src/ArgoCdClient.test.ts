@@ -1425,6 +1425,156 @@ describe('ArgoCdClient', () => {
       expect(health.message).toBeUndefined();
     });
 
+    it('builds application insights from Argo CD data only', async () => {
+      const pod = {
+        metadata: { name: 'api-1', namespace: 'default' },
+        spec: {
+          nodeName: 'node-1',
+          containers: [{ name: 'api', image: 'api:latest' }],
+          initContainers: [
+            {
+              name: 'init',
+              image: 'init@sha256:abc',
+              resources: {
+                requests: { cpu: '10m', memory: '16Mi' },
+                limits: { cpu: '20m', memory: '32Mi' },
+              },
+            },
+          ],
+        },
+        status: {
+          phase: 'Running',
+          containerStatuses: [{ name: 'api', restartCount: 3 }],
+          initContainerStatuses: [],
+        },
+      };
+
+      mockJson({
+        status: {
+          health: { status: 'Degraded' },
+          sync: { status: 'OutOfSync', revision: 'abc123' },
+        },
+      });
+      mockJson({
+        items: [
+          {
+            kind: 'Deployment',
+            namespace: 'default',
+            name: 'api',
+            liveState: '{"replicas":1}',
+            normalizedLiveState: '{"replicas":2}',
+          },
+          { kind: 'Service', name: 'missing-live-state' },
+          { kind: 'ConfigMap', name: 'missing-normalized', liveState: '{}' },
+          {
+            kind: 'Secret',
+            name: 'equal',
+            liveState: '{}',
+            normalizedLiveState: '{}',
+          },
+        ],
+      });
+      mockJson({
+        nodes: [
+          { kind: 'Pod', name: 'api-1', images: ['api:latest', 'init@sha256:abc'] },
+          { kind: 'Service', name: 'no-images' },
+        ],
+        orphanedNodes: [{ kind: 'Service', namespace: 'default', name: 'old' }],
+      });
+      mockJson({
+        items: [
+          {
+            type: 'Warning',
+            reason: 'OOMKilling',
+            message: 'Container exceeded memory',
+            involvedObject: { kind: 'Pod', namespace: 'default', name: 'api-1' },
+          },
+          { type: 'Normal', reason: 'Pulled' },
+        ],
+      });
+      mockJson({
+        items: [
+          { kind: 'Pod', liveState: JSON.stringify(pod) },
+          {
+            kind: 'Pod',
+            liveState: JSON.stringify({
+              metadata: { name: 'complete' },
+              spec: {
+                containers: [
+                  {
+                    name: 'complete',
+                    image: 'complete@sha256:def',
+                    resources: {
+                      requests: { cpu: '10m', memory: '8Mi' },
+                      limits: { cpu: '20m', memory: '16Mi' },
+                    },
+                  },
+                ],
+              },
+              status: {},
+            }),
+          },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const insights = await client.applications.insights('guestbook', {
+        appNamespace: 'argocd',
+        project: 'default',
+        restartWarningThreshold: 2,
+      });
+
+      expect(insights).toMatchObject({
+        name: 'guestbook',
+        health: 'Degraded',
+        sync: 'OutOfSync',
+        revision: 'abc123',
+        images: ['api:latest', 'init@sha256:abc'],
+        counts: { resources: 4, orphanedResources: 1, warningEvents: 1 },
+      });
+      expect(new Set(insights.warnings.map((warning) => warning.code))).toEqual(
+        new Set([
+          'IMAGE_LATEST_TAG',
+          'IMAGE_NOT_PINNED',
+          'MISSING_CPU_REQUEST',
+          'MISSING_MEMORY_REQUEST',
+          'MISSING_CPU_LIMIT',
+          'MISSING_MEMORY_LIMIT',
+          'CONTAINER_RESTARTS',
+          'WARNING_EVENT',
+          'OUT_OF_SYNC_RESOURCE',
+          'ORPHANED_RESOURCE',
+        ]),
+      );
+      expect(insights.warnings.find((warning) => warning.code === 'WARNING_EVENT')?.severity).toBe(
+        'critical',
+      );
+    });
+
+    it('returns an empty Unknown insights report with default options', async () => {
+      mockJson({});
+      mockJson({ items: [] });
+      mockJson({});
+      mockJson({ items: [{ type: 'Warning' }] });
+      mockJson({ items: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const insights = await client.applications.insights('empty');
+
+      expect(insights).toMatchObject({
+        health: 'Unknown',
+        sync: 'Unknown',
+        images: [],
+        counts: { resources: 0, orphanedResources: 0, warningEvents: 1 },
+      });
+      expect(insights.warnings).toEqual([
+        {
+          code: 'WARNING_EVENT',
+          severity: 'warning',
+          message: 'Kubernetes warning event',
+          resource: undefined,
+        },
+      ]);
+    });
+
     it('returns only resources with differing live and normalized state', async () => {
       mockJson({
         items: [

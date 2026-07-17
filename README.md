@@ -112,6 +112,10 @@ const allocation = await argocd.applications.resourceAllocation('guestbook');
 // Requests follow scheduler rules for init containers, native sidecars, Pod overhead and
 // Pod-level resources. This is declared allocation, not current resource usage or cluster capacity.
 
+const insights = await argocd.applications.insights('guestbook');
+// → health, sync, revision, images, allocation and actionable warnings for mutable images,
+//   missing requests/limits, restarts, Warning events, drift and orphaned resources
+
 await argocd.applications.nodes('guestbook');
 // → ArgoCdNode[]  Kubernetes nodes hosting the app's pods (osImage, architecture, kernelVersion…)
 
@@ -533,7 +537,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `terminateOperation` · `wait` · `rollback` · `deleteByName` · `getResource` · `patchResource` · `deleteResource` · `resourceActions` · `runResourceAction` · `resourceLinks` · `refresh` · `manifests` · `revisionMetadata` · `chartDetails` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `terminateOperation` · `wait` · `rollback` · `deleteByName` · `getResource` · `patchResource` · `deleteResource` · `resourceActions` · `runResourceAction` · `resourceLinks` · `refresh` · `manifests` · `revisionMetadata` · `chartDetails` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `insights` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `apps` · `deleteByRepo` |

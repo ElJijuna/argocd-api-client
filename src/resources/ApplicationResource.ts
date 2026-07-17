@@ -2,6 +2,8 @@ import type {
   ArgoCdApplication,
   ArgoCdApplicationGetParams,
   ArgoCdApplicationHealth,
+  ArgoCdApplicationInsights,
+  ArgoCdApplicationInsightsParams,
   ArgoCdApplicationList,
   ArgoCdApplicationListParams,
   ArgoCdApplicationLogsParams,
@@ -34,6 +36,7 @@ import type {
   ArgoCdRevisionSourceParams,
   ArgoCdRunResourceActionRequest,
 } from '../domain/application';
+import { buildApplicationInsights } from './applicationInsights';
 import {
   allLimitsCovered,
   calculatePodResourceAllocation,
@@ -715,6 +718,36 @@ export class ApplicationResource {
       status: (h?.['status'] as string | undefined) ?? 'Unknown',
       message: h?.['message'] as string | undefined,
     };
+  }
+
+  /**
+   * Builds a read-only operational report from Argo CD application, resource-tree, managed-resource,
+   * event, and live-Pod data. Detects mutable images, missing requests/limits, restarts, warning
+   * events, drift, and orphaned resources without contacting Kubernetes directly.
+   */
+  async insights(
+    name: string,
+    params: ArgoCdApplicationInsightsParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationInsights> {
+    const { appNamespace, project } = params;
+    const [application, resources, tree, events, allocation] = await Promise.all([
+      this.get(name, { appNamespace, project }, signal),
+      this.managedResources(name, { appNamespace }, signal),
+      this.resourceTree(name, { appNamespace }, signal),
+      this.events(name, { appNamespace }, signal),
+      this.resourceAllocation(name, { appNamespace }, signal),
+    ]);
+
+    return buildApplicationInsights({
+      name,
+      application,
+      resources,
+      tree,
+      events,
+      allocation,
+      params,
+    });
   }
 
   /**

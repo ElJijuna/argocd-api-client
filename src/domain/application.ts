@@ -384,6 +384,52 @@ export interface ArgoCdApplicationResourceAllocation {
   limitsFullySpecified: ArgoCdResourceLimitCoverage;
 }
 
+/** Stable warning codes emitted by `applications.insights()`. */
+export type ArgoCdApplicationInsightCode =
+  | 'IMAGE_LATEST_TAG'
+  | 'IMAGE_NOT_PINNED'
+  | 'MISSING_CPU_REQUEST'
+  | 'MISSING_MEMORY_REQUEST'
+  | 'MISSING_CPU_LIMIT'
+  | 'MISSING_MEMORY_LIMIT'
+  | 'CONTAINER_RESTARTS'
+  | 'WARNING_EVENT'
+  | 'OUT_OF_SYNC_RESOURCE'
+  | 'ORPHANED_RESOURCE';
+
+/** One actionable application observation derived from Argo CD data. */
+export interface ArgoCdApplicationInsightWarning {
+  code: ArgoCdApplicationInsightCode;
+  severity: 'info' | 'warning' | 'critical';
+  message: string;
+  resource?: { kind?: string; namespace?: string; name?: string };
+  container?: string;
+}
+
+/** Options controlling the locally-computed application insight report. */
+export interface ArgoCdApplicationInsightsParams {
+  appNamespace?: string;
+  project?: string;
+  /** Restart count at which a container warning is emitted. Defaults to 1. */
+  restartWarningThreshold?: number;
+}
+
+/** Consolidated read-only application health, drift, allocation, and risk report. */
+export interface ArgoCdApplicationInsights {
+  name: string;
+  health: string;
+  sync: string;
+  revision?: string;
+  images: string[];
+  allocation: ArgoCdApplicationResourceAllocation;
+  warnings: ArgoCdApplicationInsightWarning[];
+  counts: {
+    resources: number;
+    orphanedResources: number;
+    warningEvents: number;
+  };
+}
+
 /** A single container within a pod. */
 export interface ArgoCdContainer {
   /** Container name. */
