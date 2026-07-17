@@ -120,6 +120,30 @@ const before = await argocd.applications.snapshot('guestbook');
 const preview = await argocd.applications.plan('guestbook', { revision: 'v2' });
 // plan() renders manifests and uses Argo CD server-side dry-run diff; it does not mutate resources
 
+// Fleet operations
+const bulk = await argocd.applications.syncMany(['api', 'worker'], {
+  concurrency: 2,
+  sync: { prune: true },
+  wait: true,
+  waitFor: { health: true },
+});
+// → one fulfilled/rejected result per application; failures do not hide sibling results
+
+for await (const app of argocd.applications.iterate({ project: ['production'] })) {
+  console.log(app.metadata?.name);
+}
+
+const stopWatching = new AbortController();
+for await (const app of argocd.applications.watch(
+  { project: ['production'], intervalMs: 5_000 },
+  stopWatching.signal,
+)) {
+  console.log('Application changed:', app.metadata?.name);
+}
+
+const fleet = await argocd.applications.fleetSummary({ project: ['production'] });
+// → total applications plus health/sync counts and original application records
+
 await argocd.applications.nodes('guestbook');
 // → ArgoCdNode[]  Kubernetes nodes hosting the app's pods (osImage, architecture, kernelVersion…)
 
@@ -541,7 +565,7 @@ The benchmark suite uses mocked `fetch` responses, so it never calls a real Argo
 | Service | Client property | Methods |
 | --- | --- | --- |
 | `SessionService` | — | `createSession` · `deleteSession` · `userInfo` |
-| `ApplicationService` | `applications` | `list` · `get` · `create` · `update` · `patch` · `sync` · `terminateSync` · `terminateOperation` · `wait` · `rollback` · `deleteByName` · `getResource` · `patchResource` · `deleteResource` · `resourceActions` · `runResourceAction` · `resourceLinks` · `refresh` · `manifests` · `serverSideDiff` · `plan` · `snapshot` · `revisionMetadata` · `chartDetails` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `insights` · `nodes` · `health` · `diff` · `events` |
+| `ApplicationService` | `applications` | `list` · `iterate` · `watch` · `fleetSummary` · `get` · `create` · `update` · `patch` · `sync` · `syncMany` · `terminateSync` · `terminateOperation` · `wait` · `rollback` · `deleteByName` · `getResource` · `patchResource` · `deleteResource` · `resourceActions` · `runResourceAction` · `resourceLinks` · `refresh` · `manifests` · `serverSideDiff` · `plan` · `snapshot` · `revisionMetadata` · `chartDetails` · `resourceTree` · `managedResources` · `logs` · `images` · `pods` · `containers` · `resourceAllocation` · `insights` · `nodes` · `health` · `diff` · `events` |
 | `ApplicationSetService` | `applicationSets` | `list` · `get` · `create` · `update` · `deleteByName` |
 | `ProjectService` | `projects` | `list` · `get` · `create` · `update` · `deleteByName` · `events` · `repositories` |
 | `RepositoryService` | `repositories` | `list` · `get` · `create` · `refs` · `apps` · `deleteByRepo` |

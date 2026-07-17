@@ -38,6 +38,24 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/revisions/{revision}/chartdetails` | ✅ `chartDetails()` |
 | `DELETE` | `/applications/{name}/operation` | ✅ `terminateOperation()` |
 
+### Application client helpers
+
+| Helper | Purpose | Status |
+| --- | --- | --- |
+| `resourceAllocation()` | Effective declared CPU, memory, and ephemeral-storage allocation by Pod/node/app | ✅ |
+| `insights()` | Consolidated health, drift, image, restart, event, and allocation warnings | ✅ |
+| `snapshot()` | Point-in-time audit snapshot | ✅ |
+| `compareApplicationSnapshots()` | Local before/after snapshot comparison | ✅ |
+| `plan()` | Manifest render plus Argo CD server-side dry-run diff | ✅ |
+| `syncMany()` | Bounded-concurrency fleet synchronization with per-app results | ✅ |
+| `iterate()` | Async iteration over current application list response | ✅ |
+| `watch()` | Abortable polling that emits changed application resource versions | ✅ |
+| `fleetSummary()` | Health and sync counts across an application list | ✅ |
+
+`iterate()` intentionally reflects the current Argo CD list response; it does not claim server-side
+pagination. `watch()` uses explicit polling because the REST API does not expose a portable streaming
+watch contract across supported Argo CD versions.
+
 ### ProjectService
 | Method | Endpoint | Status |
 | --- | --- | --- |

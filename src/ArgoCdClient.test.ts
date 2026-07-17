@@ -1191,6 +1191,121 @@ describe('ArgoCdClient', () => {
       ).toEqual([]);
     });
 
+    it('syncs many applications with bounded workers and preserves failures', async () => {
+      mockJson({ metadata: { name: 'a' } });
+      mockJson({ message: 'denied' }, 403);
+      mockJson({ metadata: { name: 'c' } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const results = await client.applications.syncMany(['a', 'b', 'c'], { concurrency: 0 });
+
+      expect(results.map(({ name, status }) => ({ name, status }))).toEqual([
+        { name: 'a', status: 'fulfilled' },
+        { name: 'b', status: 'rejected' },
+        { name: 'c', status: 'fulfilled' },
+      ]);
+      expect(results[1].error).toBeInstanceOf(ArgoCdApiError);
+    });
+
+    it('waits after each successful bulk sync when requested', async () => {
+      mockJson({ metadata: { name: 'a' } });
+      mockJson({ metadata: { name: 'a' }, status: { health: { status: 'Healthy' } } });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const results = await client.applications.syncMany(['a'], {
+        wait: true,
+        sync: { prune: true },
+        waitFor: { health: true },
+      });
+
+      expect(results[0].application?.status).toEqual({ health: { status: 'Healthy' } });
+      expect(mockFetch.mock.calls[1][0]).toContain('/wait');
+    });
+
+    it('uses bulk defaults and wraps non-Error failures', async () => {
+      mockFetch.mockRejectedValueOnce('offline');
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const results = await client.applications.syncMany(['a']);
+
+      expect(results[0].error).toEqual(new Error('offline'));
+      await expect(client.applications.syncMany([])).resolves.toEqual([]);
+    });
+
+    it('iterates applications and summarizes fleet status', async () => {
+      const items = [
+        {
+          metadata: { name: 'a' },
+          status: { health: { status: 'Healthy' }, sync: { status: 'Synced' } },
+        },
+        { metadata: { name: 'b' }, status: {} },
+      ];
+      mockJson({ items });
+      mockJson({ items });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const iterated = [];
+
+      for await (const application of client.applications.iterate()) iterated.push(application);
+      const fleet = await client.applications.fleetSummary();
+
+      expect(iterated).toHaveLength(2);
+      expect(fleet).toMatchObject({
+        total: 2,
+        health: { Healthy: 1, Unknown: 1 },
+        sync: { Synced: 1, Unknown: 1 },
+      });
+    });
+
+    it('watches only changed application resource versions', async () => {
+      mockJson({ items: [{ metadata: { name: 'a', resourceVersion: '1' } }] });
+      mockJson({ items: [{ metadata: { name: 'a', resourceVersion: '2' } }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const stream = client.applications.watch({ intervalMs: 0, emitInitial: false });
+      const changed = await stream[Symbol.asyncIterator]().next();
+
+      expect(changed.value.metadata?.resourceVersion).toBe('2');
+      await stream[Symbol.asyncIterator]().return?.();
+    });
+
+    it('watches with defaults and aborts an active polling delay', async () => {
+      mockJson({ items: [{ metadata: {} }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const controller = new AbortController();
+      const iterator = client.applications
+        .watch(undefined, controller.signal)
+        [Symbol.asyncIterator]();
+
+      await expect(iterator.next()).resolves.toMatchObject({ done: false });
+      const pending = iterator.next();
+      controller.abort(new Error('stop'));
+      await expect(pending).rejects.toThrow('stop');
+    });
+
+    it('uses AbortError when polling is aborted without an explicit reason', async () => {
+      mockJson({ items: [{ metadata: { name: 'a' } }] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const signal = {
+        aborted: false,
+        addEventListener: (_type: string, listener: () => void) => listener(),
+      } as unknown as AbortSignal;
+      const iterator = client.applications.watch({}, signal)[Symbol.asyncIterator]();
+
+      await expect(iterator.next()).resolves.toMatchObject({ done: false });
+      await expect(iterator.next()).rejects.toMatchObject({ name: 'AbortError' });
+    });
+
+    it('handles an abort racing with polling listener registration', async () => {
+      mockJson({ items: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      let checks = 0;
+      const signal = {
+        get aborted() {
+          checks += 1;
+          return checks > 1;
+        },
+      } as AbortSignal;
+      const iterator = client.applications.watch({}, signal)[Symbol.asyncIterator]();
+
+      await expect(iterator.next()).rejects.toMatchObject({ name: 'AbortError' });
+    });
+
     it('parses NDJSON logs and returns log entries', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,

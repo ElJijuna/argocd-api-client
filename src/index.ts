@@ -22,6 +22,7 @@ export type { ArgoCdSession, ArgoCdSessionRequest, ArgoCdUserInfo } from './doma
 export type {
   ArgoCdApplication,
   ArgoCdApplicationGetParams,
+  ArgoCdApplicationFleetSummary,
   ArgoCdApplicationHealth,
   ArgoCdApplicationInsightCode,
   ArgoCdApplicationInsights,
@@ -40,6 +41,7 @@ export type {
   ArgoCdApplicationSnapshotParams,
   ArgoCdApplicationResourceAllocation,
   ArgoCdApplicationWaitRequest,
+  ArgoCdApplicationWatchParams,
   ArgoCdContainer,
   ArgoCdChartDetails,
   ArgoCdDeleteResourceParams,
@@ -74,6 +76,10 @@ export type {
   ArgoCdServerSideDiff,
   ArgoCdServerSideDiffItem,
   ArgoCdServerSideDiffParams,
+  ArgoCdSyncManyOptions,
+  ArgoCdSyncManyResult,
+  ArgoCdSyncRequest,
+  ArgoCdSyncResource,
 } from './domain/application';
 export type {
   ArgoCdApplicationSet,

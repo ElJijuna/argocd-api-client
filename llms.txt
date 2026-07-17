@@ -22,5 +22,8 @@ Use `ArgoCdClient` as the main entry point. API services are exposed as typed re
 - `client.applications.resourceAllocation(...)` calculates declared CPU, memory, and ephemeral-storage allocation from live Pods, grouped by Pod and node.
 - `client.applications.insights(...)` consolidates health, drift, allocation, image hygiene, restarts, warning events, and orphaned resources using Argo CD data only.
 - `client.applications.snapshot(...)`, `compareApplicationSnapshots(...)`, and `plan(...)` support audit snapshots, before/after comparison, and server-side dry-run deployment previews.
+- `client.applications.syncMany(...)` performs bounded-concurrency fleet synchronization and preserves one fulfilled/rejected result per application.
+- `client.applications.iterate(...)`, `watch(...)`, and `fleetSummary(...)` provide async traversal, abortable change polling, and fleet health/sync aggregation.
+- `client.applications.sync(...)` accepts the additive `ArgoCdSyncRequest` type for revisions, multi-source positions, dry-run, prune, force, selected resources, manifests, strategy, and operation metadata.
 - `client.on('request', listener)` observes completed logical requests.
 - `ArgoCdApiError` exposes HTTP status, response body, URL, method, and request ID.

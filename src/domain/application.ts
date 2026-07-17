@@ -51,6 +51,29 @@ export interface ArgoCdApplicationGetParams extends QueryParams {
   refresh?: 'normal' | 'hard' | string;
 }
 
+/** Resource selector included in an application sync operation. */
+export interface ArgoCdSyncResource {
+  group?: string;
+  kind?: string;
+  name?: string;
+  namespace?: string;
+}
+
+/** Strongly typed application sync request. Unknown future fields remain accepted. */
+export interface ArgoCdSyncRequest extends Record<string, unknown> {
+  revision?: string;
+  revisions?: string[];
+  sourceNames?: string[];
+  sourcePositions?: number[];
+  dryRun?: boolean;
+  prune?: boolean;
+  force?: boolean;
+  resources?: ArgoCdSyncResource[];
+  manifests?: string[];
+  strategy?: Record<string, unknown>;
+  infos?: Array<{ name?: string; value?: string }>;
+}
+
 /** Query parameters for fetching application logs. */
 export interface ArgoCdApplicationLogsParams extends QueryParams {
   /** Pod name to fetch logs from. */
@@ -486,6 +509,36 @@ export interface ArgoCdApplicationPlan {
   diff: ArgoCdServerSideDiff;
   insights: ArgoCdApplicationInsights;
   modifiedResources: ArgoCdServerSideDiffItem[];
+}
+
+/** Options for bounded multi-application synchronization. */
+export interface ArgoCdSyncManyOptions {
+  concurrency?: number;
+  wait?: boolean;
+  sync?: ArgoCdSyncRequest;
+  waitFor?: ArgoCdApplicationWaitRequest;
+}
+
+/** Result for one application in a bulk synchronization. */
+export interface ArgoCdSyncManyResult {
+  name: string;
+  status: 'fulfilled' | 'rejected';
+  application?: ArgoCdApplication;
+  error?: Error;
+}
+
+/** Polling options for `applications.watch()`. */
+export interface ArgoCdApplicationWatchParams extends ArgoCdApplicationListParams {
+  intervalMs?: number;
+  emitInitial?: boolean;
+}
+
+/** Fleet health/sync summary calculated from `applications.list()`. */
+export interface ArgoCdApplicationFleetSummary {
+  total: number;
+  health: Record<string, number>;
+  sync: Record<string, number>;
+  applications: ArgoCdApplication[];
 }
 
 /** A single container within a pod. */

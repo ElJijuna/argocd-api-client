@@ -1,6 +1,7 @@
 import type {
   ArgoCdApplication,
   ArgoCdApplicationGetParams,
+  ArgoCdApplicationFleetSummary,
   ArgoCdApplicationHealth,
   ArgoCdApplicationInsights,
   ArgoCdApplicationInsightsParams,
@@ -16,6 +17,7 @@ import type {
   ArgoCdApplicationSnapshot,
   ArgoCdApplicationSnapshotParams,
   ArgoCdApplicationWaitRequest,
+  ArgoCdApplicationWatchParams,
   ArgoCdContainer,
   ArgoCdChartDetails,
   ArgoCdDeleteResourceParams,
@@ -40,6 +42,9 @@ import type {
   ArgoCdRunResourceActionRequest,
   ArgoCdServerSideDiff,
   ArgoCdServerSideDiffParams,
+  ArgoCdSyncManyOptions,
+  ArgoCdSyncManyResult,
+  ArgoCdSyncRequest,
 } from '../domain/application';
 import { buildApplicationInsights } from './applicationInsights';
 import {
@@ -61,6 +66,19 @@ function appendQuery(path: string, params: Record<string, unknown>): string {
   const encoded = query.toString();
 
   return encoded ? `${path}?${encoded}` : path;
+}
+
+function waitForPoll(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(resolve, delayMs);
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+
+    if (signal?.aborted) abort();
+    else signal?.addEventListener('abort', abort, { once: true });
+  });
 }
 
 /**
@@ -234,7 +252,7 @@ export class ApplicationResource {
    */
   async sync(
     name: string,
-    body: Record<string, unknown> = {},
+    body: ArgoCdSyncRequest = {},
     signal?: AbortSignal,
   ): Promise<ArgoCdApplication> {
     return this.post<ArgoCdApplication>(
@@ -242,6 +260,100 @@ export class ApplicationResource {
       body,
       signal,
     );
+  }
+
+  /** Synchronizes multiple applications with bounded concurrency and per-application results. */
+  async syncMany(
+    names: readonly string[],
+    options: ArgoCdSyncManyOptions = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdSyncManyResult[]> {
+    const concurrency = Math.max(1, Math.floor(options.concurrency ?? 4));
+    const results = new Array<ArgoCdSyncManyResult>(names.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < names.length) {
+        const index = next++;
+        const name = names[index];
+
+        try {
+          let application = await this.sync(name, options.sync, signal);
+
+          if (options.wait) application = await this.wait(name, options.waitFor, signal);
+          results[index] = { name, status: 'fulfilled', application };
+        } catch (error) {
+          results[index] = {
+            name,
+            status: 'rejected',
+            error: error instanceof Error ? error : new Error(String(error)),
+          };
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(concurrency, names.length) }, worker));
+
+    return results;
+  }
+
+  /** Iterates applications from the current Argo CD list response. */
+  async *iterate(
+    params: ArgoCdApplicationListParams = {},
+    signal?: AbortSignal,
+  ): AsyncIterable<ArgoCdApplication> {
+    const response = await this.list(params, signal);
+
+    for (const application of response.items) yield application;
+  }
+
+  /** Polls Argo CD and yields applications whose resourceVersion changed. */
+  async *watch(
+    params: ArgoCdApplicationWatchParams = {},
+    signal?: AbortSignal,
+  ): AsyncIterable<ArgoCdApplication> {
+    const { intervalMs = 5_000, emitInitial = true, ...listParams } = params;
+    const versions = new Map<string, string | undefined>();
+    let initial = true;
+
+    while (!signal?.aborted) {
+      const response = await this.list(listParams, signal);
+
+      for (const application of response.items) {
+        const key = `${application.metadata?.namespace ?? ''}/${application.metadata?.name ?? ''}`;
+        const version = application.metadata?.resourceVersion;
+
+        if ((initial && emitInitial) || (!initial && versions.get(key) !== version)) {
+          yield application;
+        }
+        versions.set(key, version);
+      }
+
+      initial = false;
+      await waitForPoll(intervalMs, signal);
+    }
+  }
+
+  /** Summarizes fleet health and sync states from one list call. */
+  async fleetSummary(
+    params: ArgoCdApplicationListParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationFleetSummary> {
+    const { items } = await this.list(params, signal);
+    const health: Record<string, number> = {};
+    const sync: Record<string, number> = {};
+
+    for (const application of items) {
+      const status = application.status as Record<string, unknown> | undefined;
+      const healthValue = ((status?.['health'] as Record<string, unknown> | undefined)?.[
+        'status'
+      ] ?? 'Unknown') as string;
+      const syncValue = ((status?.['sync'] as Record<string, unknown> | undefined)?.['status'] ??
+        'Unknown') as string;
+      health[healthValue] = (health[healthValue] ?? 0) + 1;
+      sync[syncValue] = (sync[syncValue] ?? 0) + 1;
+    }
+
+    return { total: items.length, health, sync, applications: items };
   }
 
   /**
