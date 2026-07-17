@@ -430,6 +430,64 @@ export interface ArgoCdApplicationInsights {
   };
 }
 
+/** Point-in-time application state suitable for audit and before/after comparisons. */
+export interface ArgoCdApplicationSnapshot {
+  capturedAt: string;
+  name: string;
+  application: ArgoCdApplication;
+  insights: ArgoCdApplicationInsights;
+  manifests: ArgoCdApplicationManifests;
+  resources: ArgoCdManagedResource[];
+}
+
+/** Changes between two application snapshots. */
+export interface ArgoCdApplicationSnapshotDiff {
+  healthChanged: boolean;
+  syncChanged: boolean;
+  revisionChanged: boolean;
+  addedImages: string[];
+  removedImages: string[];
+  addedWarningCodes: ArgoCdApplicationInsightCode[];
+  resolvedWarningCodes: ArgoCdApplicationInsightCode[];
+  requestDelta: ArgoCdNormalizedResources;
+}
+
+/** One resource returned by Argo CD's server-side diff endpoint. */
+export interface ArgoCdServerSideDiffItem extends ArgoCdManagedResource {
+  diff?: string;
+  modified?: boolean;
+  resourceVersion?: string;
+}
+
+/** Server-side dry-run diff response. */
+export interface ArgoCdServerSideDiff {
+  items?: ArgoCdServerSideDiffItem[];
+  modified?: boolean;
+}
+
+/** Query for server-side dry-run diff. */
+export interface ArgoCdServerSideDiffParams extends QueryParams {
+  appNamespace?: string;
+  project?: string;
+  targetManifests?: string[];
+}
+
+/** Options shared by application snapshots and deployment plans. */
+export interface ArgoCdApplicationSnapshotParams extends ArgoCdApplicationInsightsParams {
+  revision?: string;
+  sourcePositions?: number[];
+  revisions?: string[];
+  noCache?: boolean;
+}
+
+/** Read-only deployment preview computed by Argo CD. */
+export interface ArgoCdApplicationPlan {
+  manifests: ArgoCdApplicationManifests;
+  diff: ArgoCdServerSideDiff;
+  insights: ArgoCdApplicationInsights;
+  modifiedResources: ArgoCdServerSideDiffItem[];
+}
+
 /** A single container within a pod. */
 export interface ArgoCdContainer {
   /** Container name. */

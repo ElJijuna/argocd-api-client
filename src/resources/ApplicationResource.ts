@@ -9,9 +9,12 @@ import type {
   ArgoCdApplicationLogsParams,
   ArgoCdApplicationManifests,
   ArgoCdApplicationManifestsParams,
+  ArgoCdApplicationPlan,
   ArgoCdApplicationResourceManifest,
-  ArgoCdApplicationResourceParams,
   ArgoCdApplicationResourceAllocation,
+  ArgoCdApplicationResourceParams,
+  ArgoCdApplicationSnapshot,
+  ArgoCdApplicationSnapshotParams,
   ArgoCdApplicationWaitRequest,
   ArgoCdContainer,
   ArgoCdChartDetails,
@@ -35,6 +38,8 @@ import type {
   ArgoCdRevisionMetadataParams,
   ArgoCdRevisionSourceParams,
   ArgoCdRunResourceActionRequest,
+  ArgoCdServerSideDiff,
+  ArgoCdServerSideDiffParams,
 } from '../domain/application';
 import { buildApplicationInsights } from './applicationInsights';
 import {
@@ -304,6 +309,19 @@ export class ApplicationResource {
   ): Promise<ArgoCdApplicationManifests> {
     return this.request<ArgoCdApplicationManifests>(
       `/api/v1/applications/${encodeURIComponent(name)}/manifests`,
+      params,
+      signal,
+    );
+  }
+
+  /** Performs Argo CD's server-side apply dry-run diff for supplied target manifests. */
+  async serverSideDiff(
+    name: string,
+    params: ArgoCdServerSideDiffParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdServerSideDiff> {
+    return this.request<ArgoCdServerSideDiff>(
+      `/api/v1/applications/${encodeURIComponent(name)}/server-side-diff`,
       params,
       signal,
     );
@@ -748,6 +766,63 @@ export class ApplicationResource {
       allocation,
       params,
     });
+  }
+
+  /** Captures application, desired manifests, live resources, and insights at one point in time. */
+  async snapshot(
+    name: string,
+    params: ArgoCdApplicationSnapshotParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationSnapshot> {
+    const { appNamespace, project, revision, sourcePositions, revisions, noCache } = params;
+    const [application, insights, manifests, resources] = await Promise.all([
+      this.get(name, { appNamespace, project }, signal),
+      this.insights(name, params, signal),
+      this.manifests(
+        name,
+        { appNamespace, project, revision, sourcePositions, revisions, noCache },
+        signal,
+      ),
+      this.managedResources(name, { appNamespace }, signal),
+    ]);
+
+    return {
+      capturedAt: new Date().toISOString(),
+      name,
+      application,
+      insights,
+      manifests,
+      resources,
+    };
+  }
+
+  /** Renders desired manifests and performs a server-side dry-run diff. No resources are mutated. */
+  async plan(
+    name: string,
+    params: ArgoCdApplicationSnapshotParams = {},
+    signal?: AbortSignal,
+  ): Promise<ArgoCdApplicationPlan> {
+    const { appNamespace, project, revision, sourcePositions, revisions, noCache } = params;
+    const [manifests, insights] = await Promise.all([
+      this.manifests(
+        name,
+        { appNamespace, project, revision, sourcePositions, revisions, noCache },
+        signal,
+      ),
+      this.insights(name, params, signal),
+    ]);
+    const diff = await this.serverSideDiff(
+      name,
+      { appNamespace, project, targetManifests: manifests.manifests ?? [] },
+      signal,
+    );
+
+    return {
+      manifests,
+      diff,
+      insights,
+      modifiedResources: (diff.items ?? []).filter((item) => item.modified),
+    };
   }
 
   /**

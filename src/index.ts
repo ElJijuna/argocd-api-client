@@ -1,5 +1,6 @@
 export { ArgoCdClient } from './ArgoCdClient';
 export { ArgoCdApiError } from './errors/ArgoCdApiError';
+export { compareApplicationSnapshots } from './helpers/applicationSnapshots';
 export { AccountResource } from './resources/AccountResource';
 export { ApplicationResource } from './resources/ApplicationResource';
 export { ApplicationSetResource } from './resources/ApplicationSetResource';
@@ -31,8 +32,12 @@ export type {
   ArgoCdApplicationLogsParams,
   ArgoCdApplicationManifests,
   ArgoCdApplicationManifestsParams,
+  ArgoCdApplicationPlan,
   ArgoCdApplicationResourceManifest,
   ArgoCdApplicationResourceParams,
+  ArgoCdApplicationSnapshot,
+  ArgoCdApplicationSnapshotDiff,
+  ArgoCdApplicationSnapshotParams,
   ArgoCdApplicationResourceAllocation,
   ArgoCdApplicationWaitRequest,
   ArgoCdContainer,
@@ -66,6 +71,9 @@ export type {
   ArgoCdRevisionMetadataParams,
   ArgoCdRevisionSourceParams,
   ArgoCdRunResourceActionRequest,
+  ArgoCdServerSideDiff,
+  ArgoCdServerSideDiffItem,
+  ArgoCdServerSideDiffParams,
 } from './domain/application';
 export type {
   ArgoCdApplicationSet,

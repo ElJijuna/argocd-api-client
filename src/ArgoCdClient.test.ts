@@ -1,4 +1,4 @@
-import { ArgoCdApiError, ArgoCdClient } from './index';
+import { ArgoCdApiError, ArgoCdClient, compareApplicationSnapshots } from './index';
 
 const mockFetch = jest.fn();
 
@@ -1075,7 +1075,7 @@ describe('ArgoCdClient', () => {
     });
 
     it('supports default parameters for new application read and resource methods', async () => {
-      for (let index = 0; index < 6; index += 1) mockJson({});
+      for (let index = 0; index < 7; index += 1) mockJson({});
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
 
       await client.applications.manifests('guestbook');
@@ -1084,8 +1084,111 @@ describe('ArgoCdClient', () => {
       await client.applications.resourceActions('guestbook');
       await client.applications.resourceLinks('guestbook');
       await client.applications.chartDetails('guestbook', 'HEAD');
+      await client.applications.serverSideDiff('guestbook');
 
-      expect(mockFetch).toHaveBeenCalledTimes(6);
+      expect(mockFetch).toHaveBeenCalledTimes(7);
+    });
+
+    it('captures and compares application snapshots', async () => {
+      mockJson({ metadata: { name: 'guestbook' } });
+      mockJson({ status: { health: { status: 'Healthy' }, sync: { status: 'Synced' } } });
+      mockJson({ items: [] });
+      mockJson({ nodes: [] });
+      mockJson({ items: [] });
+      mockJson({ items: [] });
+      mockJson({ manifests: ['{}'], revision: 'before' });
+      mockJson({ items: [] });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const before = await client.applications.snapshot('guestbook');
+      const after = {
+        ...before,
+        insights: {
+          ...before.insights,
+          health: 'Degraded',
+          sync: 'OutOfSync',
+          revision: 'after',
+          images: ['new:v2'],
+          warnings: [
+            {
+              code: 'IMAGE_NOT_PINNED' as const,
+              severity: 'info' as const,
+              message: 'new',
+            },
+          ],
+          allocation: {
+            ...before.insights.allocation,
+            requests: {
+              cpuMillicores: 250,
+              memoryBytes: 1024,
+              ephemeralStorageBytes: 2048,
+            },
+          },
+        },
+      };
+      before.insights.images = ['old:v1', 'old:v1'];
+      before.insights.warnings = [
+        { code: 'MISSING_CPU_LIMIT', severity: 'warning', message: 'old' },
+      ];
+      const comparison = compareApplicationSnapshots(before, after);
+
+      expect(before.capturedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(comparison).toEqual({
+        healthChanged: true,
+        syncChanged: true,
+        revisionChanged: true,
+        addedImages: ['new:v2'],
+        removedImages: ['old:v1'],
+        addedWarningCodes: ['IMAGE_NOT_PINNED'],
+        resolvedWarningCodes: ['MISSING_CPU_LIMIT'],
+        requestDelta: {
+          cpuMillicores: 250,
+          memoryBytes: 1024,
+          ephemeralStorageBytes: 2048,
+        },
+      });
+    });
+
+    it('plans a deployment with rendered manifests and server-side diff', async () => {
+      mockJson({ manifests: ['{"kind":"Deployment"}'], revision: 'v2' });
+      mockJson({ status: {} });
+      mockJson({ items: [] });
+      mockJson({ nodes: [] });
+      mockJson({ items: [] });
+      mockJson({ items: [] });
+      mockJson({
+        modified: true,
+        items: [
+          { kind: 'Deployment', name: 'api', modified: true },
+          { kind: 'Service', name: 'api', modified: false },
+        ],
+      });
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const plan = await client.applications.plan('guestbook', {
+        revision: 'v2',
+        appNamespace: 'argocd',
+      });
+      const diffUrl = new URL(mockFetch.mock.calls[6][0] as string);
+
+      expect(diffUrl.pathname).toContain('/server-side-diff');
+      expect(diffUrl.searchParams.getAll('targetManifests')).toEqual(['{"kind":"Deployment"}']);
+      expect(plan.modifiedResources).toEqual([{ kind: 'Deployment', name: 'api', modified: true }]);
+    });
+
+    it('plans with default options and empty manifest/diff responses', async () => {
+      mockJson({});
+      mockJson({});
+      mockJson({ items: [] });
+      mockJson({});
+      mockJson({ items: [] });
+      mockJson({ items: [] });
+      mockJson({});
+      const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
+      const plan = await client.applications.plan('empty');
+
+      expect(plan.modifiedResources).toEqual([]);
+      expect(
+        new URL(mockFetch.mock.calls[6][0] as string).searchParams.getAll('targetManifests'),
+      ).toEqual([]);
     });
 
     it('parses NDJSON logs and returns log entries', async () => {

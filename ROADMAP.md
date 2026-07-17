@@ -23,6 +23,7 @@ Legend: ✅ done · 🔜 planned · ❌ not planned
 | `GET` | `/applications/{name}/resource-tree` | ✅ |
 | `GET` | `/applications/{name}/managed-resources` | ✅ |
 | `GET` | `/applications/{name}/manifests` | ✅ `manifests()` |
+| `GET` | `/applications/{name}/server-side-diff` | ✅ `serverSideDiff()` / `plan()` |
 | `GET` | `/applications/{name}/resource` | ✅ `getResource()` |
 | `POST` | `/applications/{name}/resource` | ✅ `patchResource()` |
 | `DELETE` | `/applications/{name}/resource` | ✅ `deleteResource()` |
