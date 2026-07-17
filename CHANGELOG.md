@@ -1,3 +1,14 @@
+# [1.7.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.6.0...v1.7.0) (2026-07-17)
+
+
+### Features
+
+* add insights method to ApplicationResource and related types for application health and resource analysis ([2685986](https://github.com/ElJijuna/argocd-api-client/commit/268598645e464fcfeb9e33cc039813d0c76a72b0))
+* add live-resource operations and manifests rendering in ApplicationResource ([f2d0700](https://github.com/ElJijuna/argocd-api-client/commit/f2d0700abc0000503936ab28f9b78a9f478f3f41))
+* add resource allocation calculations and enhance resource management in ArgoCdClient ([2558650](https://github.com/ElJijuna/argocd-api-client/commit/255865095b32210ab8b963e7a03a55fc4ff6e4d5))
+* add snapshot and plan methods to ApplicationResource for application state auditing and deployment previews ([7c79c33](https://github.com/ElJijuna/argocd-api-client/commit/7c79c33e5b368a1373e2e113a4b8844d29a1d8f3))
+* add syncMany, iterate, watch, and fleetSummary methods to ApplicationResource for enhanced application management ([dddfb63](https://github.com/ElJijuna/argocd-api-client/commit/dddfb6353f3b8358679d3718359a71284af46c94))
+
 # [1.6.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.5.0...v1.6.0) (2026-07-13)
 
 
