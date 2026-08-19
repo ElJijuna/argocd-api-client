@@ -594,9 +594,10 @@ describe('ArgoCdClient', () => {
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const cluster = await client.clusters.invalidateCache('https://kubernetes.default.svc');
 
-      expect(mockFetch.mock.calls[0][0]).toContain(
-        '/api/v1/clusters/https%3A%2F%2Fkubernetes.default.svc/invalidate-cache',
+      expect(mockFetch.mock.calls[0][0]).toBe(
+        'https://argocd.example.com/api/v1/clusters/https%3A%2F%2Fkubernetes.default.svc/invalidate-cache',
       );
+      expect(mockFetch.mock.calls[0][1]).toMatchObject({ method: 'POST' });
       expect(cluster.name).toBe('in-cluster');
     });
 

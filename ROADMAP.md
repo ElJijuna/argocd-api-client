@@ -85,7 +85,7 @@ watch contract across supported Argo CD versions.
 | `GET` | `/clusters/{server}` | ✅ |
 | `PUT` | `/clusters/{server}` | ✅ |
 | `DELETE` | `/clusters/{server}` | ✅ |
-| `GET` | `/clusters/{server}/invalidate-cache` | ✅ `clusters.invalidateCache()` |
+| `POST` | `/clusters/{server}/invalidate-cache` | ✅ `clusters.invalidateCache()` |
 
 ### AccountService
 | Method | Endpoint | Status |

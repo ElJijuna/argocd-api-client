@@ -53,7 +53,7 @@ export class ClusterResource {
 
   /** Invalidates the cache for a cluster and returns the updated cluster. */
   async invalidateCache(server: string, signal?: AbortSignal): Promise<ArgoCdCluster> {
-    return this.request<ArgoCdCluster>(
+    return this.post<ArgoCdCluster>(
       `/api/v1/clusters/${encodeURIComponent(server)}/invalidate-cache`,
       undefined,
       signal,
