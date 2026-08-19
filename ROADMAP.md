@@ -2,6 +2,10 @@
 
 Tracks planned additions against the [Argo CD REST API](https://argo-cd.readthedocs.io/en/stable/developer-guide/api-docs/).
 
+Endpoint claims follow the [compatibility policy](COMPATIBILITY.md). The current minimum guaranteed
+version and canonical contract are Argo CD `v3.5.1`; older versions are best-effort. A planned endpoint
+must state its minimum version when it is not portable across the declared support baseline.
+
 Legend: ✅ done · 🔜 planned · ❌ not planned
 
 ---

@@ -22,6 +22,16 @@ lifecycle, extension guidance, and design decisions.
 
 Argo CD exposes Swagger docs at `/swagger-ui` on each Argo CD server. Argo CD authenticates API requests with JWTs; pass the JWT in the `Authorization` header as `Bearer <jwt>`.
 
+## Compatibility
+
+The minimum guaranteed Argo CD version is `v3.5.1`, using the API contract pinned to that exact stable
+release. Older versions may work on a best-effort basis but are not covered by the compatibility
+guarantee. The current test suite uses mocked fetch responses and does not claim live-server version
+coverage.
+
+See [Argo CD compatibility](COMPATIBILITY.md) for the authoritative support baseline, portable versus
+version-gated endpoint rules, contract verification status, and deprecation policy.
+
 ## Install
 
 ```bash

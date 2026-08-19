@@ -93,6 +93,15 @@ Files in `src/domain/` group interfaces by API area. These types describe wire d
 runtime validation. API compatibility therefore depends on Argo CD returning shapes compatible with
 the declared types.
 
+The authoritative [compatibility policy](COMPATIBILITY.md) pins the minimum guaranteed Argo CD version
+and canonical API contract. Endpoint adapters are portable when their method, route, parameters, and
+response shape exist across the declared support baseline. Version-gated adapters must document their
+minimum Argo CD version; capability detection must not be scattered across individual resources.
+
+CI currently exercises these contracts through mocked fetch responses rather than a live Argo CD
+server. Version-specific contract verification is tracked separately and must use exact stable tags,
+never moving `master` or `stable` references.
+
 For non-2xx responses, the parser throws `ArgoCdApiError`. The error contains `status`, `statusText`,
 parsed response `body`, request `url`, HTTP `method`, and a request ID when the server supplies one.
 Network, abort, JSON parsing, and listener errors propagate as their original errors.
