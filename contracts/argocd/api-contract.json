@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 1,
+  "argoCdVersion": "v3.5.1",
+  "source": "https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.1/assets/swagger.json",
+  "sha256": "5cfd43dfd31446d875ab35244b19f2aaccc8120c8ddfafd90e2c25b668acaee6",
+  "operations": [
+    {
+      "method": "DELETE",
+      "path": "/api/v1/account/{name}/token/{id}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/account/{name}/token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/account/{name}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/account/can-i/{resource}/{action}/{subresource}"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/account/password"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/account"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/applications/{application.metadata.name}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{applicationName}/managed-resources"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{applicationName}/resource-tree"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{appName}/server-side-diff"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/links"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/logs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/manifests"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/applications/{name}/operation"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/pods/{podName}/logs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/{name}/resource/actions/v2"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/resource/actions"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/{name}/resource/actions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/resource/links"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/applications/{name}/resource"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/resource"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/{name}/resource"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/revisions/{revision}/chartdetails"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/revisions/{revision}/metadata"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/revisions/{revision}/ocimetadata"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/{name}/rollback"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/applications/{name}/spec"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/{name}/sync"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}/syncwindows"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/applications/{name}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications/{name}"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/applications/{name}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications/manifestsWithFiles"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applicationsets/{name}/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applicationsets/{name}/resource-tree"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/applicationsets/{name}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applicationsets/{name}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applicationsets/generate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applicationsets"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applicationsets"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/applications"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/applications"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/certificates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/certificates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/certificates"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clusters/{id.value}/invalidate-cache"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clusters/{id.value}/rotate-auth"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/clusters/{id.value}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clusters/{id.value}"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/clusters/{id.value}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/clusters"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/clusters"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gpgkeys/{keyID}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/gpgkeys"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gpgkeys"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gpgkeys"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/services"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/templates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/triggers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}/detailed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}/globalprojects"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}/links"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}/syncwindows"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/projects/{name}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{name}"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project.metadata.name}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/projects/{project}/roles/{role}/token/{iat}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project}/roles/{role}/token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/repocreds/{creds.url}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/repocreds/{url}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repocreds"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/repocreds"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/repositories/{repo.repo}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories/{repo}/apps"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories/{repo}/helmcharts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories/{repo}/oci-tags"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories/{repo}/refs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/repositories/{repo}/validate"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/repositories/{repo}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories/{repo}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/repositories/{source.repoURL}/appdetails"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/repositories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/repositories"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/session/userinfo"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/session"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/session"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/plugins"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stream/applications/{applicationName}/resource-tree"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stream/applicationsets"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stream/applications"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/write-repocreds/{creds.url}"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/write-repocreds/{url}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/write-repocreds"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/write-repocreds"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/write-repositories/{repo.repo}"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/write-repositories/{repo}/validate"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/write-repositories/{repo}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/write-repositories/{repo}"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/write-repositories"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/write-repositories"
+    },
+    {
+      "method": "GET",
+      "path": "/api/version"
+    }
+  ]
+}

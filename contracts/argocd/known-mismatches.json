@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "mismatches": [
+    {
+      "source": "AccountResource.listTokens",
+      "method": "GET",
+      "normalizedPath": "/api/v1/account/{}/tokens",
+      "reason": "Pre-existing client mapping absent from the pinned contract; requires separate API review."
+    },
+    {
+      "source": "ApplicationResource.terminateSync",
+      "method": "DELETE",
+      "normalizedPath": "/api/v1/applications/{}/sync",
+      "reason": "Pre-existing method mismatch; changing termination behavior requires separate API review."
+    },
+    {
+      "source": "ApplicationResource.wait",
+      "method": "POST",
+      "normalizedPath": "/api/v1/applications/{}/wait",
+      "reason": "Pre-existing client mapping absent from the pinned contract; requires separate API review."
+    },
+    {
+      "source": "ApplicationSetResource.update",
+      "method": "PUT",
+      "normalizedPath": "/api/v1/applicationsets/{}",
+      "reason": "Pre-existing method mismatch; update semantics require separate API review."
+    },
+    {
+      "source": "GpgKeyResource.deleteByKeyId",
+      "method": "DELETE",
+      "normalizedPath": "/api/v1/gpgkeys/{}",
+      "reason": "Pre-existing route mismatch; the pinned contract models deletion through query parameters."
+    },
+    {
+      "source": "ProjectResource.repositories",
+      "method": "GET",
+      "normalizedPath": "/api/v1/projects/{}/repositories",
+      "reason": "Pre-existing client mapping absent from the pinned contract; requires separate API review."
+    },
+    {
+      "source": "VersionResource.get",
+      "method": "GET",
+      "normalizedPath": "/api/v1/version",
+      "reason": "Pre-existing route mismatch; the pinned contract exposes /api/version."
+    }
+  ]
+}

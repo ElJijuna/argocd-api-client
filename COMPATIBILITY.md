@@ -8,7 +8,7 @@ This document is the authoritative compatibility policy for `argocd-api-client`.
 | --- | --- |
 | Minimum guaranteed Argo CD version | `v3.5.1` |
 | Canonical API contract | [`v3.5.1/assets/swagger.json`](https://github.com/argoproj/argo-cd/blob/v3.5.1/assets/swagger.json) |
-| Version-specific CI coverage | Not yet automated; tracked by [#2](https://github.com/ElJijuna/argocd-api-client/issues/2) |
+| Version-specific CI coverage | Method and route mappings checked against the normalized `v3.5.1` contract snapshot |
 | Live-server integration coverage | None; unit tests use an injected fetch implementation |
 
 Argo CD versions older than `v3.5.1` may work, but they are best-effort and are not covered by the
@@ -37,8 +37,8 @@ Capability detection is tracked separately by
 ## Contract changes and deprecations
 
 Contract updates must be reviewed as explicit changes and identify added, removed, or changed HTTP
-methods, routes, parameters, and response shapes. Automated drift detection is tracked by
-[#2](https://github.com/ElJijuna/argocd-api-client/issues/2).
+methods, routes, parameters, and response shapes. The checked-in normalized snapshot makes method and
+route verification network-independent; see [the update procedure](contracts/argocd/README.md).
 
 When upstream Argo CD removes or incompatibly changes an endpoint:
 
@@ -52,7 +52,9 @@ or routes, are bug fixes rather than deprecations.
 
 ## Verification claims
 
-The test suite currently verifies request behavior with mocked or injected fetch responses. It does
-not run an Argo CD server and must not be presented as live compatibility testing. Once #2 is
-implemented, CI may additionally claim contract compatibility only for the exact Argo CD tags checked
-by that workflow.
+The test suite verifies request behavior with mocked or injected fetch responses and checks client
+method/route mappings against the pinned contract snapshot. Pre-existing drift is recorded explicitly
+in `contracts/argocd/known-mismatches.json`; CI rejects new drift and stale exceptions but those known
+entries remain outside the compatibility claim. The suite does not run an Argo CD server and must not
+be presented as live compatibility testing. CI may claim contract compatibility only for the exact
+Argo CD tags recorded by the snapshot.
