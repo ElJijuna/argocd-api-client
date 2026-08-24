@@ -88,7 +88,7 @@ describe('ArgoCdClient transport', () => {
     await client.version.get();
 
     expect(transport).toHaveBeenCalledTimes(1);
-    expect(transport.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/version');
+    expect(transport.mock.calls[0][0]).toBe('https://argocd.example.com/api/version');
   });
 
   it('deduplicates concurrent session refreshes', async () => {

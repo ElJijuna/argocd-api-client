@@ -36,12 +36,6 @@
       "method": "GET",
       "normalizedPath": "/api/v1/projects/{}/repositories",
       "reason": "Pre-existing client mapping absent from the pinned contract; requires separate API review."
-    },
-    {
-      "source": "VersionResource.get",
-      "method": "GET",
-      "normalizedPath": "/api/v1/version",
-      "reason": "Pre-existing route mismatch; the pinned contract exposes /api/version."
     }
   ]
 }

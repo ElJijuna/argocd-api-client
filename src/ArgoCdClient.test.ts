@@ -334,7 +334,7 @@ describe('ArgoCdClient', () => {
       const client = new ArgoCdClient({ baseUrl: 'https://argocd.example.com', token: 'jwt' });
       const version = await client.version.get();
 
-      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/v1/version');
+      expect(mockFetch.mock.calls[0][0]).toBe('https://argocd.example.com/api/version');
       expect(version.Version).toBe('v2.9.3');
       expect(version.GitTag).toBe('v2.9.3');
       expect(version.Platform).toBe('linux/amd64');

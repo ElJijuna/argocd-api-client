@@ -8,6 +8,6 @@ export class VersionResource {
 
   /** Returns Argo CD server version information. */
   async get(signal?: AbortSignal): Promise<ArgoCdVersion> {
-    return this.request<ArgoCdVersion>('/api/v1/version', undefined, signal);
+    return this.request<ArgoCdVersion>('/api/version', undefined, signal);
   }
 }
