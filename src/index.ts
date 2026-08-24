@@ -1,5 +1,6 @@
 export { ArgoCdClient } from './ArgoCdClient';
 export { ArgoCdApiError } from './errors/ArgoCdApiError';
+export { ARGO_CD_MINIMUM_SUPPORTED_VERSION } from './compatibility';
 export { compareApplicationSnapshots } from './helpers/applicationSnapshots';
 export { AccountResource } from './resources/AccountResource';
 export { ApplicationResource } from './resources/ApplicationResource';
@@ -18,6 +19,14 @@ export type {
   ArgoCdClientEvents,
   RequestEvent,
 } from './ArgoCdClient';
+export type {
+  ArgoCdCapabilitiesOptions,
+  ArgoCdCapability,
+  ArgoCdFeatureFlags,
+  ArgoCdNormalizedServerVersion,
+  ArgoCdServerCapabilities,
+  ArgoCdServerVersionKind,
+} from './compatibility';
 export type { ArgoCdSession, ArgoCdSessionRequest, ArgoCdUserInfo } from './domain/session';
 export type {
   ArgoCdApplication,

@@ -265,6 +265,15 @@ await argocd.settings.get();
 await argocd.version.get();
 // → ArgoCdVersion  { Version, BuildDate, GitCommit, GitTag, GoVersion, Platform, ... }
 
+// Cached compatibility query with typed flags
+const capabilities = await argocd.capabilities();
+if (capabilities.features.applicationWatchStream) {
+  // The version policy expects the native Application watch endpoint to exist.
+}
+
+// Ignore the cached result and query the server again
+await argocd.capabilities({ refresh: true });
+
 // Session
 await argocd.userInfo();
 // → ArgoCdUserInfo  { loggedIn, username, iss, groups }

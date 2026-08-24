@@ -98,6 +98,10 @@ and canonical API contract. Endpoint adapters are portable when their method, ro
 response shape exist across the declared support baseline. Version-gated adapters must document their
 minimum Argo CD version; capability detection must not be scattered across individual resources.
 
+Runtime capability rules live in `src/compatibility.ts`. `ArgoCdClient.capabilities()` combines those
+rules with the VersionService response and caches the last successful result per client instance.
+Refresh bypasses the cache; failed and aborted requests do not replace it.
+
 CI currently exercises these contracts through mocked fetch responses rather than a live Argo CD
 server. Version-specific contract verification is tracked separately and must use exact stable tags,
 never moving `master` or `stable` references.

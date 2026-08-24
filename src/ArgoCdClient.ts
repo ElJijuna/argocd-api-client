@@ -1,3 +1,8 @@
+import {
+  buildArgoCdServerCapabilities,
+  type ArgoCdCapabilitiesOptions,
+  type ArgoCdServerCapabilities,
+} from './compatibility';
 import type { ArgoCdSession, ArgoCdSessionRequest, ArgoCdUserInfo } from './domain/session';
 import { ArgoCdApiError } from './errors/ArgoCdApiError';
 import { AccountResource } from './resources/AccountResource';
@@ -95,6 +100,7 @@ export class ArgoCdClient {
   private credentials?: StoredCredentials;
   private readonly fetch: typeof globalThis.fetch;
   private refreshPromise?: Promise<void>;
+  private capabilitiesCache?: ArgoCdServerCapabilities;
   private sessionGeneration = 0;
   private readonly publicHeaders = { Accept: 'application/json' };
   private readonly postHeaders = { Accept: 'application/json', 'Content-Type': 'application/json' };
@@ -267,6 +273,23 @@ export class ArgoCdClient {
    */
   async userInfo(signal?: AbortSignal): Promise<ArgoCdUserInfo> {
     return this.request<ArgoCdUserInfo>('/api/v1/session/userinfo', {}, signal);
+  }
+
+  /**
+   * Returns normalized server version information and typed capability flags.
+   * Results are cached after the first successful query.
+   */
+  async capabilities(options: ArgoCdCapabilitiesOptions = {}): Promise<ArgoCdServerCapabilities> {
+    if (!options.refresh && this.capabilitiesCache) {
+      return this.capabilitiesCache;
+    }
+
+    const raw = await this.version.get(options.signal);
+    const capabilities = buildArgoCdServerCapabilities(raw);
+
+    this.capabilitiesCache = capabilities;
+
+    return capabilities;
   }
 
   private authHeaders(includeContentType?: boolean) {

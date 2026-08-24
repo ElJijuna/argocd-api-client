@@ -31,8 +31,10 @@ package.
   `ArgoCdApiError` boundary.
 
 The client does not silently replace an unsupported operation with a different endpoint or mutation.
-Capability detection is tracked separately by
-[#18](https://github.com/ElJijuna/argocd-api-client/issues/18).
+`ArgoCdClient.capabilities()` queries the server version once, caches the result, and evaluates typed
+feature flags from the centralized baseline in `src/compatibility.ts`. Callers can pass
+`{ refresh: true }` to query the server again. Unknown, prerelease, dirty, and development versions
+produce conservative flags with every version-gated capability disabled.
 
 ## Contract changes and deprecations
 

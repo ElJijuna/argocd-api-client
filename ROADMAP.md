@@ -153,6 +153,9 @@ watch contract across supported Argo CD versions.
 | --- | --- | --- |
 | `GET` | `/version` | ✅ `version.get()` |
 
+`ArgoCdClient.capabilities()` normalizes the server version and exposes cached, typed feature flags
+derived from the compatibility policy. `{ refresh: true }` bypasses its cache.
+
 ---
 
 ## Out of scope
