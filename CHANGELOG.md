@@ -1,3 +1,11 @@
+## [1.7.1](https://github.com/ElJijuna/argocd-api-client/compare/v1.7.0...v1.7.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* use POST for cluster cache invalidation ([2488535](https://github.com/ElJijuna/argocd-api-client/commit/24885352e537d7e5ebef96a952afaa12d192161e)), closes [#3](https://github.com/ElJijuna/argocd-api-client/issues/3)
+* use the official Argo CD version endpoint ([eddde7d](https://github.com/ElJijuna/argocd-api-client/commit/eddde7d0a3c519e638ef6bac5031539601cc96c6))
+
 # [1.7.0](https://github.com/ElJijuna/argocd-api-client/compare/v1.6.0...v1.7.0) (2026-07-17)
 
 
